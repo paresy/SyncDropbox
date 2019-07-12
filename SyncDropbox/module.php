@@ -544,7 +544,7 @@
 				$this->SetTimerInterval("Upload", 1000);
 			} else if(sizeof($fileQueue["update"]) > 0) {
 				//Upload to Dropbox
-				$this->SendDebug("Upload", sprintf("Updating file... %s. Size %s", $fileQueue["update"][0], $this->formatBytes(filesize($baseDir . $fileQueue["add"][0]))), 0);
+				$this->SendDebug("Upload", sprintf("Updating file... %s. Size %s", $fileQueue["update"][0], $this->formatBytes(filesize($baseDir . $fileQueue["update"][0]))), 0);
 				$dropbox->files->upload("/" . $this->GetDestinationFolder() . "/" . $fileQueue["update"][0], $baseDir . $fileQueue["update"][0], "overwrite");
 				
 				//Update uploaded file in fileCache
