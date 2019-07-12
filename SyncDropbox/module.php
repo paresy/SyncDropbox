@@ -374,7 +374,6 @@
 								} else {
 									//First sync. Lets match the hash
 									if(is_string($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
-										echo "Hashing...";
 										if($this->dropbox_hash_file($baseDir . $dir . $file) != $fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]) {
 											$fileQueue["update"][] = $dir . $file;
 											$uploadSize += $filesize;
