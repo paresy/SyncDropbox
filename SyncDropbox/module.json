@@ -1,0 +1,14 @@
+{
+	"id": "{E3A349A9-A733-A6D6-E20E-EC87B150BEB6}",
+	"name": "SyncDropbox",
+	"type": 0,
+	"vendor": "",
+	"aliases": 
+	[
+		"Sync (Dropbox)"
+	],
+	"parentRequirements": [],
+	"childRequirements": [],
+	"implemented": [],
+	"prefix": "SDB"
+}
