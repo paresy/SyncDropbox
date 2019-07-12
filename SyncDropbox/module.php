@@ -177,14 +177,16 @@
 						];
 					}
 					
-					$fileQueue = json_decode($this->GetBuffer("FileQueue"), true);
-					
-					if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
-						$data->actions[] = [
-							"type" => "Label",
-							"caption" => "Sync in progress... " . sprintf("Remaining = Add: %d, Update: %d, Remove: %d", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"]))
-						];
-					}					
+					if($this->GetBuffer("FileQueue") != "") {
+						$fileQueue = json_decode($this->GetBuffer("FileQueue"), true);
+						
+						if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
+							$data->actions[] = [
+								"type" => "Label",
+								"caption" => "Sync in progress... " . sprintf("Remaining = Add: %d, Update: %d, Remove: %d", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"]))
+							];
+						}
+					}
 					
 					//Add Sync button
 					$data->actions[] = [
