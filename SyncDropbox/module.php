@@ -457,7 +457,7 @@
 			}
 			
 			//Save the updated FileQueue
-			$this->SetBuffer("FileQueue", json_encode($fileQueue));
+			$this->SetBuffer("FileQueue", gzencode(json_encode($fileQueue)));
 			
 			//Save timestamp of last action
 			$this->SetBuffer("LastUpload", time());
