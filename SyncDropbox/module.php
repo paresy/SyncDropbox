@@ -178,7 +178,7 @@
 					}
 					
 					if($this->GetBuffer("FileQueue") != "") {
-						$fileQueue = json_decode($this->GetBuffer("FileQueue"), true);
+						$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
 						
 						if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 							$data->actions[] = [
@@ -273,12 +273,6 @@
 			
 			$fileQueue = ["add" => [], "update" => [], "delete" => []];
 			
-			//Build the index'ed version from the FileCache
-			$fileIndex = [];
-			foreach($fileCache as $file) {
-				$fileIndex[$file["path_lower"]] = $file; 
-			}
-
 			$baseDir = IPS_GetKernelDir();
 			
 			$backupSize = 0;
@@ -286,7 +280,7 @@
 			$uploadSize = 0;
 			
 			//Iterate through the locale filesystem and add all files not in the index
-			$searchDir = function($dir) use ($baseDir, $fileIndex, &$fileQueue, &$searchDir, &$backupSize, &$backupSkip, &$uploadSize) {
+			$searchDir = function($dir) use ($baseDir, $fileCache, &$fileQueue, &$searchDir, &$backupSize, &$backupSkip, &$uploadSize) {
 				$files = scandir ($baseDir . $dir);
 				foreach($files as $file) {
 					if($file == "." || $file == "..") {
@@ -310,12 +304,12 @@
 								$backupSize += $filesize;
 								
 								//Add any new files
-								if(!isset($fileIndex[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
+								if(!isset($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
 									$fileQueue["add"][] = $dir . $file;
 									$uploadSize += $filesize;
 								} else {
 									//Update file if the file's timestamp is newer
-									$matchFilesize = $fileIndex[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]["size"] == $filesize;
+									$matchFilesize = $fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]["size"] == $filesize;
 									$matchChecksum = true; //FIXME
 									
 									if(!$matchFilesize || !$matchChecksum) {
@@ -326,7 +320,7 @@
 							}
 						} else {
 							//Check if ignored files got somehow into the index. If yes, delete them
-							if(isset($fileIndex[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir .$file)])) {
+							if(isset($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir .$file)])) {
 								$fileQueue["delete"][] = $dir .$file;
 							}
 						}
@@ -353,6 +347,11 @@
 			
 			$targets = $dropbox->files->list_folder("", false);
 			
+			if(!$targets) {
+				echo "Sync Error: Cannot load target folders!";
+				return;
+			}
+			
 			$fileCache = [];
 			
 			//Only update file cache if the target folder already exists
@@ -361,7 +360,7 @@
 					$files = $dropbox->files->list_folder("/" . $this->GetDestinationFolder(), true);
 					
 					if(!$files) {
-						echo "Error while running Sync";
+						echo "Sync Error: Cannot load already uploaded files!";
 						return;
 					}
 					
@@ -369,20 +368,32 @@
 						die("FIXME: Listing is incomplete. More items to read!");
 					}
 					
-					$fileCache = $files["entries"];
-					$this->SendDebug("Sync", sprintf("We have %d files in your Dropbox", sizeof($fileCache)), 0);
+					foreach($files["entries"] as $file) {
+						if($file[".tag"] == "file") {
+							$fileCache[$file["path_lower"]] = [
+								"size" => $file["size"],
+								"hash" => $file["content_hash"]
+							];
+						}
+					}
+					
 				}
 			}
+
+			$compressedFileCache = gzencode(json_encode($fileCache));
+			$this->SendDebug("Sync", sprintf("We have %d files in your Dropbox (FileCache: %s)", sizeof($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
 			
 			//Save all entries for partial sync
-			$this->SetBuffer("FileCache", json_encode($fileCache));
+			$this->SetBuffer("FileCache", $compressedFileCache);
 			
 			//Build the add/update/delete queue
 			$fileQueue = $this->CalculateFileQueue($fileCache);
-			$this->SendDebug("Sync", sprintf("Sync = Add: %d, Update: %d, Remove: %d", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"])), 0);				
+			
+			$compressedFileQueue = gzencode(json_encode($fileQueue));
+			$this->SendDebug("Sync", sprintf("Sync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"]), $this->formatBytes(strlen($compressedFileQueue))), 0);				
 			
 			//Save the FileQueue which the Upload function will process
-			$this->SetBuffer("FileQueue", json_encode($fileQueue));
+			$this->SetBuffer("FileQueue", $compressedFileQueue);
 			
 			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 				//Start Upload
@@ -400,7 +411,7 @@
 		public function ReSync() {
 			
 			//Load the current FileQueue
-			$fileQueue = json_decode($this->GetBuffer("FileQueue"), true);
+			$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
 			
 			
 			
@@ -415,7 +426,7 @@
 			$baseDir = IPS_GetKernelDir();
 			
 			//Load the current FileQueue
-			$fileQueue = json_decode($this->GetBuffer("FileQueue"), true);
+			$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
 			
 			//Upload new files first
 			if(sizeof($fileQueue["add"]) > 0) {
