@@ -476,8 +476,41 @@
 			
 			//Load the current FileQueue
 			$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
+
+			//If there are any pending uploading we will skip the resync
+			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
+				if(intval($this->GetBuffer("LastUpload")) + 15 * 60 > time()) {
+					$this->SendDebug("ReSync", "Forced. Upload seems to be stuck", 0);
+				} else {
+					$this->SendDebug("ReSync", "Skipping. Upload has not completed yet", 0);
+					return;
+				}
+			}			
 			
+			//Load the current FileCache
+			$fileCache = json_decode(gzdecode($this->GetBuffer("FileCache")), true);
 			
+			//Build the add/update/delete queue. Will also update the fileCache!
+			$fileQueue = $this->CalculateFileQueue($fileCache);
+			
+			//Save the updated FileCache
+			$compressedFileCache = gzencode(json_encode($fileCache));
+			$this->SendDebug("ReSync", sprintf("We have %d files in your Dropbox (FileCache: %s)", sizeof($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
+			$this->SetBuffer("FileCache", $compressedFileCache);
+			
+			//Save the updated FileQueue
+			$compressedFileQueue = gzencode(json_encode($fileQueue));
+			$this->SendDebug("ReSync", sprintf("ReSync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"]), $this->formatBytes(strlen($compressedFileQueue))), 0);
+			$this->SetBuffer("FileQueue", $compressedFileQueue);			
+			
+			//Start Upload if there is anything to do
+			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
+				//Start Upload
+				$this->SendDebug("ReSync", "Upload will start in 10 seconds...", 0);			
+				$this->SetTimerInterval("Upload", 10 * 1000);
+			} else {
+				$this->SendDebug("ReSync", "Done. Everything is up to date.", 0);
+			}
 			
 		}
 		
