@@ -329,7 +329,7 @@
 			
 		}
 		
-		private function CalculateFileQueue($fileCache) {
+		private function CalculateFileQueue(&$fileCache) {
 			
 			$fileQueue = ["add" => [], "update" => [], "delete" => []];
 			
@@ -339,8 +339,10 @@
 			$backupSkip = 0;
 			$uploadSize = 0;
 			
+			$touchedFiles = [];
+			
 			//Iterate through the locale filesystem and add all files not in the index
-			$searchDir = function($dir) use ($baseDir, $fileCache, &$fileQueue, &$searchDir, &$backupSize, &$backupSkip, &$uploadSize) {
+			$searchDir = function($dir) use ($baseDir, &$fileCache, &$fileQueue, &$searchDir, &$backupSize, &$backupSkip, &$uploadSize, &$touchedFiles) {
 				$files = scandir ($baseDir . $dir);
 				foreach($files as $file) {
 					if($file == "." || $file == "..") {
@@ -350,12 +352,14 @@
 						$searchDir($dir . $file . "/");
 					} else {
 						if(!$this->IgnoreFile($dir . $file)) {
+							$touchedFiles[] = strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file);
+							
 							$filesize = filesize($baseDir . $dir . $file);
 	
 							//If the file grew over the limit we will keep the last valid file in the backup
 							if($filesize > $this->ReadPropertyInteger("SizeLimit") * 1024 * 1024) {
 								//Skip files that are too big
-								$this->SendDebug("Search", sprintf("Skipping too big file... %s. Size: %s", $dir . $file, $this->formatBytes($filesize)), 0);
+								$this->SendDebug("Index", sprintf("Skipping too big file... %s. Size: %s", $dir . $file, $this->formatBytes($filesize)), 0);
 	
 								//Sum skipped files for statistics
 								$backupSkip++;
@@ -368,29 +372,33 @@
 									$fileQueue["add"][] = $dir . $file;
 									$uploadSize += $filesize;
 								} else {
-									//Update file if the file's timestamp is newer
-									$matchFilesize = $fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]["size"] == $filesize;
-									$matchChecksum = true; //FIXME
-									
-									if(!$matchFilesize || !$matchChecksum) {
-										$fileQueue["update"][] = $dir . $file;
-										$uploadSize += $filesize;
+									//First sync. Lets match the hash
+									if(is_string($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
+										echo "Hashing...";
+										if($this->dropbox_hash_file($baseDir . $dir . $file) != $fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]) {
+											$fileQueue["update"][] = $dir . $file;
+											$uploadSize += $filesize;
+										} else {
+											$fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)] = filemtime($baseDir . $dir . $file);
+										}
+									} elseif(is_int($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
+										if(filemtime($baseDir . $dir . $file) != $fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]) {
+											$fileQueue["update"][] = $dir . $file;
+											$uploadSize += $filesize;
+										}
 									}
 								}
-							}
-						} else {
-							//Check if ignored files got somehow into the index. If yes, delete them
-							if(isset($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir .$file)])) {
-								$fileQueue["delete"][] = $dir .$file;
 							}
 						}
 					}
 				}
 			};
 			$searchDir("");
-			
-			$this->SendDebug("Search", sprintf("Total Backup Size: %s", $this->formatBytes($backupSize)), 0);
-			$this->SendDebug("Search", sprintf("Required Upload Size: %s", $this->formatBytes($uploadSize)), 0);
+
+			//all untouched files in the fileCache need to be deleted
+			$fileQueue["delete"] = array_values(array_diff(array_keys($fileCache), $touchedFiles));
+
+			$this->SendDebug("Index", sprintf("Total Backup Size: %s, Upload Size: %s", $this->formatBytes($backupSize), $this->formatBytes($uploadSize)), 0);
 			
 			$this->SetBuffer("BackupSize", json_encode($backupSize));
 			$this->SetBuffer("BackupSkip", json_encode($backupSkip));
@@ -430,31 +438,27 @@
 					
 					foreach($files["entries"] as $file) {
 						if($file[".tag"] == "file") {
-							$fileCache[$file["path_lower"]] = [
-								"size" => $file["size"],
-								"hash" => $file["content_hash"]
-							];
+							$fileCache[$file["path_lower"]] = $file["content_hash"];
 						}
 					}
 					
 				}
 			}
-
-			$compressedFileCache = gzencode(json_encode($fileCache));
-			$this->SendDebug("Sync", sprintf("We have %d files in your Dropbox (FileCache: %s)", sizeof($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
 			
-			//Save all entries for partial sync
-			$this->SetBuffer("FileCache", $compressedFileCache);
-			
-			//Build the add/update/delete queue
+			//Build the add/update/delete queue. Will also update the fileCache!
 			$fileQueue = $this->CalculateFileQueue($fileCache);
 			
-			$compressedFileQueue = gzencode(json_encode($fileQueue));
-			$this->SendDebug("Sync", sprintf("Sync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"]), $this->formatBytes(strlen($compressedFileQueue))), 0);				
+			//Save all entries for partial sync
+			$compressedFileCache = gzencode(json_encode($fileCache));
+			$this->SendDebug("Sync", sprintf("We have %d files in your Dropbox (FileCache: %s)", sizeof($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
+			$this->SetBuffer("FileCache", $compressedFileCache);
 			
 			//Save the FileQueue which the Upload function will process
+			$compressedFileQueue = gzencode(json_encode($fileQueue));
+			$this->SendDebug("Sync", sprintf("Sync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"]), $this->formatBytes(strlen($compressedFileQueue))), 0);
 			$this->SetBuffer("FileQueue", $compressedFileQueue);
 			
+			//Start Upload if there is anything to do
 			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 				//Start Upload
 				$this->SendDebug("Sync", "Upload will start in 10 seconds...", 0);			
@@ -484,6 +488,9 @@
 			$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
 			
 			$baseDir = IPS_GetKernelDir();
+
+			//Load the current FileCache
+			$fileCache = json_decode(gzdecode($this->GetBuffer("FileCache")), true);
 			
 			//Load the current FileQueue
 			$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
@@ -493,20 +500,41 @@
 				//Upload to Dropbox
 				$this->SendDebug("Upload", sprintf("Adding file... %s. Size %s", $fileQueue["add"][0], $this->formatBytes(filesize($baseDir . $fileQueue["add"][0]))), 0);
 				$dropbox->files->upload("/" . $this->GetDestinationFolder() . "/" . $fileQueue["add"][0], $baseDir . $fileQueue["add"][0]);
-
+				
+				//Add uploaded file to fileCache
+				$fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $fileQueue["add"][0])] = filemtime($baseDir . $fileQueue["add"][0]);
+				
 				//Remove successful upload
 				array_shift($fileQueue["add"]);
 				
 				//Start timer for next upload
 				$this->SetTimerInterval("Upload", 1000);
 			} else if(sizeof($fileQueue["update"]) > 0) {
+				//Upload to Dropbox
+				$this->SendDebug("Upload", sprintf("Updating file... %s. Size %s", $fileQueue["update"][0], $this->formatBytes(filesize($baseDir . $fileQueue["add"][0]))), 0);
+				$dropbox->files->upload("/" . $this->GetDestinationFolder() . "/" . $fileQueue["update"][0], $baseDir . $fileQueue["update"][0], "overwrite");
+				
+				//Update uploaded file in fileCache
+				$fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $fileQueue["update"][0])] = filemtime($baseDir . $fileQueue["update"][0]);
+				
+				//Remove successful upload
+				array_shift($fileQueue["update"]);
 				
 				$this->SetTimerInterval("Upload", 1000);
 			} else if(sizeof($fileQueue["delete"]) > 0) {
+				//Delete from Dropbox
+				$this->SendDebug("Upload", sprintf("Deleting file... %s", $fileQueue["delete"][0]), 0);
+				$dropbox->files->delete($fileQueue["delete"][0]);
+				
+				//Update uploaded file in fileCache
+				unset($fileCache[strtolower($fileQueue["delete"][0])]);
+				
+				//Remove successful upload
+				array_shift($fileQueue["delete"]);
 				
 				$this->SetTimerInterval("Upload", 1000);
 			} else {
-				
+				//We are done				
 				$this->SendDebug("Upload", "Finished", 0);
 				$this->SetTimerInterval("Upload", 0);
 			}
@@ -515,6 +543,9 @@
 			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 				$this->SendDebug("Upload", sprintf("Remaining = Add: %d, Update: %d, Remove: %d", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"])), 0);
 			}
+
+			//Save the updated FileCache
+			$this->SetBuffer("FileCache", gzencode(json_encode($fileCache)));
 			
 			//Save the updated FileQueue
 			$this->SetBuffer("FileQueue", gzencode(json_encode($fileQueue)));
