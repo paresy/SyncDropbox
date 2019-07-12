@@ -268,6 +268,11 @@
 			//always compare lower case
 			$file = strtolower($file);
 			
+			//Some faulty scripts can produce invalid filenames that start with a backslash. Dropbox will not upload them
+			if($file[0] == "\\") {
+				return true;
+			}
+			
 			$path_info = pathinfo($file);
 			
 			//Do not include modules for now. We will probably want to add this as an optional switch
