@@ -424,23 +424,25 @@
 			//Only update file cache if the target folder already exists
 			foreach ($targets["entries"] as $target) {
 				if($target["path_lower"] == strtolower("/" . $this->GetDestinationFolder())) {
-					$files = $dropbox->files->list_folder("/" . $this->GetDestinationFolder(), true);
-					
-					if(!$files) {
-						echo "Sync Error: Cannot load already uploaded files!";
-						return;
-					}
-					
-					if($files["has_more"]) {
-						die("FIXME: Listing is incomplete. More items to read!");
-					}
-					
-					foreach($files["entries"] as $file) {
-						if($file[".tag"] == "file") {
-							$fileCache[$file["path_lower"]] = $file["content_hash"];
+					$files = NULL;
+					while($files == NULL || $files["has_more"]) {
+						if($files == NULL) {
+							$files = $dropbox->files->list_folder("/" . $this->GetDestinationFolder(), true);
+						} else {
+							$files = $dropbox->files->list_folder_continue($files["cursor"]);
+						}
+						
+						if(!$files) {
+							echo "Sync Error: Cannot load already uploaded files!";
+							return;
+						}
+						
+						foreach($files["entries"] as $file) {
+							if($file[".tag"] == "file") {
+								$fileCache[$file["path_lower"]] = $file["content_hash"];
+							}
 						}
 					}
-					
 				}
 			}
 			
