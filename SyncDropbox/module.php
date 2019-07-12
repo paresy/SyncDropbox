@@ -351,7 +351,7 @@
 			
 			$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
 			
-			$files = $dropbox->files->list_folder("", true);
+			$files = $dropbox->files->list_folder("/" . $this->GetDestinationFolder(), true);
 			
 			if(!$files) {
 				echo "Error while running Sync";
