@@ -220,7 +220,7 @@
 				return true;
 			}
 			
-			//Filter Thumbs.db and .DS_Store. DropBox will ignore uploads anyway
+			//Filter Thumbs.db and .DS_Store. Dropbox will ignore uploads anyway
 			if($path_info['basename'] == "thumbs.db") {
 				return true;
 			}
@@ -364,7 +364,7 @@
 			
 			$fileCache = $files["entries"];
 			
-			$this->SendDebug("Sync", sprintf("We have %d files in your DropBox", sizeof($fileCache)), 0);
+			$this->SendDebug("Sync", sprintf("We have %d files in your Dropbox", sizeof($fileCache)), 0);
 			
 			//Save all entries for partial sync
 			$this->SetBuffer("FileCache", json_encode($fileCache));
@@ -411,7 +411,7 @@
 			
 			//Upload new files first
 			if(sizeof($fileQueue["add"]) > 0) {
-				//Upload to DropBox
+				//Upload to Dropbox
 				$this->SendDebug("Upload", sprintf("Adding file... %s. Size %s", $fileQueue["add"][0], $this->formatBytes(filesize($baseDir . $fileQueue["add"][0]))), 0);
 				$dropbox->files->upload("/" . $this->GetDestinationFolder() . "/" . $fileQueue["add"][0], $baseDir . $fileQueue["add"][0]);
 
