@@ -1,0 +1,48 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "b25f3b501f3ed1a7f9163fc7032ed319",
+    "packages": [
+        {
+            "name": "lukebaird/dropbox-v2-php-sdk",
+            "version": "1.1.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/lukeb2014/Dropbox-v2-PHP-SDK.git",
+                "reference": "9c6e7fdce05478611d91c1394d4e7e93a81d1084"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/lukeb2014/Dropbox-v2-PHP-SDK/zipball/9c6e7fdce05478611d91c1394d4e7e93a81d1084",
+                "reference": "9c6e7fdce05478611d91c1394d4e7e93a81d1084",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^5.3.3 || ^7.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Dropbox\\": "sdk/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "A Dropbox SDK to work with the v2 API",
+            "time": "2019-02-08T20:49:04+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}
