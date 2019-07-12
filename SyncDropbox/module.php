@@ -301,9 +301,6 @@
 				if($file == "cacert.pem") {
 					return true;
 				}
-				if($file == "php.ini") {
-					return true;
-				}
 				if(substr($file, 0, 8) == "webfront") {
 					return true;
 				}
