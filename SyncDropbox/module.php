@@ -351,20 +351,28 @@
 			
 			$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
 			
-			$files = $dropbox->files->list_folder("/" . $this->GetDestinationFolder(), true);
+			$targets = $dropbox->files->list_folder("", false);
 			
-			if(!$files) {
-				echo "Error while running Sync";
-				return;
+			$fileCache = [];
+			
+			//Only update file cache if the target folder already exists
+			foreach ($targets["entries"] as $target) {
+				if($target["path_lower"] == strtolower("/" . $this->GetDestinationFolder())) {
+					$files = $dropbox->files->list_folder("/" . $this->GetDestinationFolder(), true);
+					
+					if(!$files) {
+						echo "Error while running Sync";
+						return;
+					}
+					
+					if($files["has_more"]) {
+						die("FIXME: Listing is incomplete. More items to read!");
+					}
+					
+					$fileCache = $files["entries"];
+					$this->SendDebug("Sync", sprintf("We have %d files in your Dropbox", sizeof($fileCache)), 0);
+				}
 			}
-			
-			if($files["has_more"]) {
-				die("FIXME: Listing is incomplete. More items to read!");
-			}
-			
-			$fileCache = $files["entries"];
-			
-			$this->SendDebug("Sync", sprintf("We have %d files in your Dropbox", sizeof($fileCache)), 0);
 			
 			//Save all entries for partial sync
 			$this->SetBuffer("FileCache", json_encode($fileCache));
