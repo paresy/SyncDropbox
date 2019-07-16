@@ -2,7 +2,11 @@
 	"id": "{CA2F7D98-6C75-7D93-C220-450EBBF57AF4}",
 	"author": "Symcon GmbH",
 	"name": "Sync (Dropbox)",
-	"url": "www.ip-symcon.de",
+	"url": "www.symcon.de",
+	"compatibility": {
+		"version": "5.2",
+		"date": 1563283585
+	},
 	"version": "1.0",
 	"build": 0,
 	"date": 0
