@@ -12,14 +12,18 @@
 			//Never delete this line!
 			parent::Create();
 			
+			$this->RegisterPropertyBoolean("Active", true);
+
 			$this->RegisterPropertyString("Token", "");
-			
+
+			$this->RegisterPropertyString("PathFilter", "");
+
 			$this->RegisterPropertyInteger("SizeLimit", 20); //In Megabytes
 			
 			$this->RegisterPropertyInteger("ReSyncInterval", 60); //In Minutes
 			
-			//Start first Sync after 60 seconds
-			$this->RegisterTimer("Sync", 60 * 1000, "SDB_Sync(\$_IPS['TARGET']);");
+			//Start first Sync after a short wait period (will be set in ApplyChanges)
+			$this->RegisterTimer("Sync", 0, "SDB_Sync(\$_IPS['TARGET']);");
 			
 			//ReSync is done after within the defined interval the first Sync
 			//ReSync will not be started if an Upload is currently running 
@@ -35,6 +39,22 @@
 			parent::ApplyChanges();
 			
 			$this->RegisterOAuth($this->oauthIdentifer);
+
+			if(!$this->ReadPropertyBoolean("Active")) {
+				$this->SetTimerInterval("Sync", 0);
+				$this->SetTimerInterval("ReSync", 0);
+				$this->SetTimerInterval("Upload", 0);
+				$this->SetBuffer("FileQueue", "");
+				$this->SetBuffer("FileCache", "");
+			} else {
+				//Start first Sync after 10 seconds while in KR_READY, otherwise wait 5 minutes
+				if(IPS_GetKernelRunlevel() == KR_READY) {
+					$this->SetTimerInterval("Sync", 10 * 1000);
+				} else {
+					$this->SetTimerInterval("Sync", 5 * 60 * 1000);
+				}
+			}
+
 		}
 		
 		private function RegisterOAuth($WebOAuth) {
@@ -199,86 +219,76 @@
 			
 			if($this->ReadPropertyString("Token")) {
 				
-				//Add some space
-				$data->actions[] = [
-					"type" => "Label",
-					"caption" => ""
-				];		
-				
 				$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
 				$account = $dropbox->users->get_current_account();
 				if(!$account || isset($account["error_summary"])) {
 					
-					$data->actions[] = [
-						"type" => "Label",
-						"caption" => "There seems to be something wrong. Please try to reregister."
-					];					
+					//Show warning
+					$data->actions[0]->visible = true;
 					
 				} else {
-					
+				
+					//Hide the register button
+					$data->actions[1]->visible = false;
+
 					$space = $dropbox->users->get_space_usage();
 					
-					$data->actions[] = [
-						"type" => "Label",
-						"caption" => "Owner: " . $account["name"]["display_name"]
-					];
-					
-					//var_dump($space);
-					
-					$data->actions[] = [
-						"type" => "Label",
-						"caption" => "Space: " . $this->formatBytes($space["used"]) . " / " . $this->formatBytes($space["allocation"]["allocated"])
-					];
+					$data->actions[2]->visible = true;
+					$data->actions[2]->caption = $this->Translate("Owner") . ": " . $account["name"]["display_name"];
+
+					$data->actions[3]->visible = true;
+					$data->actions[3]->caption = $this->Translate("Used Space") . ": " . $this->formatBytes($space["used"]) . " / " . $this->formatBytes($space["allocation"]["allocated"]);
 					
 					if(intval($this->GetBuffer("BackupSize")) > 0) {
-						$data->actions[] = [
-							"type" => "Label",
-							"caption" => "Backup Size: " . $this->formatBytes($this->GetBuffer("BackupSize"))
-						];
+						$data->actions[4]->visible = true;
+						$data->actions[4]->caption = $this->Translate("Backup Size") . ": " . $this->formatBytes($this->GetBuffer("BackupSize"));
 					}
 					
+					$data->actions[5]->visible = true;
+					if(intval($this->GetBuffer("LastFinishedUpload")) > 0) {
+						$data->actions[5]->caption = $this->Translate("Last Upload") . ": " . date("d.m.Y H:i", intval($this->GetBuffer("LastFinishedUpload")));
+					} else {
+						$data->actions[5]->caption = $this->Translate("Last Upload") . ": " . $this->Translate("Never");
+					}
+
 					if($this->GetBuffer("FileQueue") != "") {
-						$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
-						
+						$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);						
 						if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
-							$data->actions[] = [
-								"type" => "Label",
-								"caption" => "Sync in progress... " . sprintf("Remaining = Add: %d, Update: %d, Remove: %d", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"]))
-							];
+							$data->actions[7]->visible = true;
 						}
+					} else {
+						$data->actions[8]->visible = true;
 					}
-					
-					//Add Sync button
-					$data->actions[] = [
-						"type" => "Button",
-						"caption" => "Force Sync",
-						"onClick" => "echo SDB_Sync(\$id);"
-					];					
 					
 				}
 			
 			}
 
-			return json_encode($data);			
+			return json_encode($data);
 			
 		}		
 		
 		private function IgnoreFile($file) {
 			
-			//always compare lower case
+			//Always compare lower case
 			$file = strtolower($file);
 			
+			//Check against file filter
+			if($this->ReadPropertyString("PathFilter") != "") {
+				$filters = explode(";", $this->ReadPropertyString("PathFilter"));
+				foreach($filters as $filter) {
+					if(substr($file, 0, strlen($filter)) == $filter) {
+						return true;
+					}
+				}
+			}
+
 			//Some faulty scripts can produce invalid filenames that start with a backslash. Dropbox will not upload them
 			if($file[0] == "\\") {
 				return true;
 			}
 			
 			$path_info = pathinfo($file);
-			
-			//Do not include modules for now. We will probably want to add this as an optional switch
-			if(substr($file, 0, 7) == "modules") {
-				return true;
-			}
 			
 			//We do not require to backup sessions
 			if(substr($file, 0, 7) == "session") {
@@ -412,6 +422,10 @@
 			
 			$this->SetTimerInterval("Sync", 0);
 			
+			if(!$this->ReadPropertyBoolean("Active")) {
+				return;
+			}
+
 			$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
 			
 			$targets = $dropbox->files->list_folder("", false);
@@ -448,6 +462,10 @@
 				}
 			}
 			
+			//Show some progress
+			$this->UpdateFormField("UploadProgress", "visible", true);
+			$this->UpdateFormField("UploadProgress", "caption", $this->Translate("Sync in progress..."));
+
 			//Build the add/update/delete queue. Will also update the fileCache!
 			$fileQueue = $this->CalculateFileQueue($fileCache);
 			
@@ -464,19 +482,23 @@
 			//Start Upload if there is anything to do
 			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 				//Start Upload
-				$this->SendDebug("Sync", "Upload will start in 10 seconds...", 0);			
+				$this->SendDebug("Sync", "Upload will start in 10 seconds...", 0);
 				$this->SetTimerInterval("Upload", 10 * 1000);
 			} else {
 				$this->SendDebug("Sync", "Done. Everything is up to date.", 0);
 			}
 			
-			//Start ReSync
-			$this->SetTimerInterval("ReSync", $this->ReadPropertyInteger("ReSyncInterval") * 60 * 1000);
+			//Start ReSync. At least 60 minutes.
+			$this->SetTimerInterval("ReSync", max($this->ReadPropertyInteger("ReSyncInterval"), 60) * 60 * 1000);
 			
 		}
 		
 		public function ReSync() {
 			
+			if(!$this->ReadPropertyBoolean("Active")) {
+				return;
+			}
+
 			//Load the current FileQueue
 			$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
 
@@ -488,7 +510,11 @@
 					$this->SendDebug("ReSync", "Skipping. Upload has not completed yet", 0);
 					return;
 				}
-			}			
+			}
+			
+			//Show some progress
+			$this->UpdateFormField("UploadProgress", "visible", true);
+			$this->UpdateFormField("UploadProgress", "caption", $this->Translate("ReSync in progress..."));
 			
 			//Load the current FileCache
 			$fileCache = json_decode(gzdecode($this->GetBuffer("FileCache")), true);
@@ -520,6 +546,10 @@
 		public function Upload() {
 		
 			$this->SetTimerInterval("Upload", 0);
+
+			if(!$this->ReadPropertyBoolean("Active")) {
+				return;
+			}
 
 			$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
 			
@@ -570,14 +600,21 @@
 				
 				$this->SetTimerInterval("Upload", 1000);
 			} else {
-				//We are done				
+				//We are done
 				$this->SendDebug("Upload", "Finished", 0);
 				$this->SetTimerInterval("Upload", 0);
+				$this->SetBuffer("LastFinishedUpload", time());
+
+				//Send finished
+				$this->UpdateFormField("LastFinishedUpload", "caption", "Last Upload:" . " " . date("d.m.Y H:i", time()));
 			}
 			
 			//Show progress if there is anything left to do
 			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 				$this->SendDebug("Upload", sprintf("Remaining = Add: %d, Update: %d, Remove: %d", sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"])), 0);
+				$this->UpdateFormField("UploadProgress", "caption", sprintf($this->Translate("Add: %d, Update: %d, Remove: %d"), sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"])));
+			} else {
+				$this->UpdateFormField("UploadProgress", "visible", false);
 			}
 
 			//Save the updated FileCache

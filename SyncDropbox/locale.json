@@ -1,0 +1,27 @@
+{
+    "translations": {
+        "de": {
+            "Active": "Aktiv",
+            "Token": "Token",
+            "Expert options": "Expertenoptionen",
+            "Please seperate several path filters with a semicolon": "Bitte trennen Sie verschiedene Filter durch ein Semikolon",
+            "Path Filter": "Pfad-Filter",
+            "Larger files will be ignored while uploading": "Größere Dateien werden beim Upload ignoriert",
+            "Size Limit": "Größenlimit",
+            "ReSync Interval. Minimum is 60 minutes": "ReSync Intervall. Minimum ist 60 Minuten",
+            "minutes": "Minuten",
+            "ReSync Interval": "ReSync Intervall",
+            "There seems to be something wrong. Please try to reregister.": "Es scheint etwas fehlerhaft zu sein. Bitte versuchen Sie eine erneute Registrierung",
+            "Register": "Registrieren",
+            "Force Sync": "Sync erzwingen",
+            "Owner": "Besitzer",
+            "Used Space": "Benutzter Speicherplatz",
+            "Backup Size": "Backupgröße",
+            "Last Upload": "Letzter Upload",
+            "Never": "Nie",
+            "Sync in progress...": "Sync wird ausgeführt...",
+            "ReSync in progress...": "ReSync wird ausgeführt...",
+            "Add: %d, Update: %d, Remove: %d": "Hinzufügen: %d, Aktualisieren: %d, Löschen: %d"
+        }
+    }
+}
