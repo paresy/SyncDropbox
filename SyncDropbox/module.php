@@ -252,9 +252,11 @@
 					}
 
 					if($this->GetBuffer("FileQueue") != "") {
-						$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);						
+						$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
 						if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 							$data->actions[7]->visible = true;
+						} else {
+							$data->actions[8]->visible = true;
 						}
 					} else {
 						$data->actions[8]->visible = true;
@@ -465,6 +467,7 @@
 			//Show some progress
 			$this->UpdateFormField("UploadProgress", "visible", true);
 			$this->UpdateFormField("UploadProgress", "caption", $this->Translate("Sync in progress..."));
+			$this->UpdateFormField("ForceSync", "visible", false);
 
 			//Build the add/update/delete queue. Will also update the fileCache!
 			$fileQueue = $this->CalculateFileQueue($fileCache);
@@ -515,6 +518,7 @@
 			//Show some progress
 			$this->UpdateFormField("UploadProgress", "visible", true);
 			$this->UpdateFormField("UploadProgress", "caption", $this->Translate("ReSync in progress..."));
+			$this->UpdateFormField("ForceSync", "visible", false);
 			
 			//Load the current FileCache
 			$fileCache = json_decode(gzdecode($this->GetBuffer("FileCache")), true);
