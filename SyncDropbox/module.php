@@ -16,6 +16,8 @@
 
 			$this->RegisterPropertyString("Token", "");
 
+			$this->RegisterPropertyInteger("TimeLimit", 90);
+
 			$this->RegisterPropertyString("PathFilter", "");
 
 			$this->RegisterPropertyInteger("SizeLimit", 20); //In Megabytes
@@ -428,6 +430,8 @@
 				return;
 			}
 
+			set_time_limit($this->ReadPropertyInteger("TimeLimit"));
+
 			$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
 			
 			$targets = $dropbox->files->list_folder("", false);
@@ -502,6 +506,8 @@
 				return;
 			}
 
+			set_time_limit($this->ReadPropertyInteger("TimeLimit"));
+
 			//Load the current FileQueue
 			$fileQueue = json_decode(gzdecode($this->GetBuffer("FileQueue")), true);
 
@@ -554,6 +560,8 @@
 			if(!$this->ReadPropertyBoolean("Active")) {
 				return;
 			}
+
+			set_time_limit($this->ReadPropertyInteger("TimeLimit"));
 
 			$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
 			

@@ -7,6 +7,8 @@
 			"type": "ExpansionPanel",
 			"caption": "Expert options",
 			"items": [		
+				{ "type": "Label", "caption": "Raise the sync time limit if you have a lot of files" },
+				{ "name": "TimeLimit", "type": "NumberSpinner", "caption": "Time Limit", "suffix": "seconds" },
 				{ "type": "Label", "caption": "Please seperate several path filters with a semicolon" },
 				{ "name": "PathFilter", "type": "ValidationTextBox", "caption": "Path Filter" },
 				{ "type": "Label", "caption": "Larger files will be ignored while uploading" },
