@@ -420,6 +420,9 @@
 			$this->SetBuffer("BackupSize", json_encode($backupSize));
 			$this->SetBuffer("BackupSkip", json_encode($backupSkip));
 			
+			//Send new Backup Size
+			$this->UpdateFormField("BackupSize", "caption", $this->Translate("Backup Size") . ": " . $this->formatBytes($this->GetBuffer("BackupSize")));
+
 			return $fileQueue;
 			
 		}
@@ -495,8 +498,8 @@
 			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 				//Start Upload
 				$this->SendDebug("Sync", "Upload will start in 10 seconds...", 0);
-				$this->UpdateFormField("UploadProgress", "caption", $this->Translate("Upload will start in 10 seconds..."));
 				$this->SetTimerInterval("Upload", 10 * 1000);
+				$this->UpdateFormField("UploadProgress", "caption", $this->Translate("Upload will start in 10 seconds..."));
 			} else {
 				$this->SendDebug("Sync", "Done. Everything is up to date.", 0);
 				$this->SetBuffer("LastFinishedSync", time());
