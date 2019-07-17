@@ -23,6 +23,7 @@
             "Last Upload": "Letzter Upload",
             "Never": "Nie",
             "Sync in progress...": "Sync wird ausgeführt...",
+            "Scanning... %s": "Scanne... %s",
             "ReSync in progress...": "ReSync wird ausgeführt...",
             "Add: %d, Update: %d, Remove: %d": "Hinzufügen: %d, Aktualisieren: %d, Löschen: %d"
         }

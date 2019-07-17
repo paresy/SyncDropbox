@@ -359,6 +359,8 @@
 			
 			//Iterate through the locale filesystem and add all files not in the index
 			$searchDir = function($dir) use ($baseDir, &$fileCache, &$fileQueue, &$searchDir, &$backupSize, &$backupSkip, &$uploadSize, &$touchedFiles) {
+				$this->UpdateFormField("UploadProgress", "caption", sprintf($this->Translate("Scanning... %s"), $dir));
+
 				$files = scandir ($baseDir . $dir);
 				foreach($files as $file) {
 					if($file == "." || $file == "..") {
@@ -430,6 +432,11 @@
 				return;
 			}
 
+			//Show some progress
+			$this->UpdateFormField("UploadProgress", "visible", true);
+			$this->UpdateFormField("UploadProgress", "caption", $this->Translate("Sync in progress..."));
+			$this->UpdateFormField("ForceSync", "visible", false);
+
 			set_time_limit($this->ReadPropertyInteger("TimeLimit"));
 
 			$dropbox = new Dropbox\Dropbox($this->ReadPropertyString("Token"));
@@ -437,6 +444,9 @@
 			$targets = $dropbox->files->list_folder("", false);
 			
 			if(!$targets) {
+				$this->UpdateFormField("UploadProgress", "visible", false);
+				$this->UpdateFormField("ForceSync", "visible", true);
+
 				echo "Sync Error: Cannot load target folders!";
 				return;
 			}
@@ -467,11 +477,6 @@
 					}
 				}
 			}
-			
-			//Show some progress
-			$this->UpdateFormField("UploadProgress", "visible", true);
-			$this->UpdateFormField("UploadProgress", "caption", $this->Translate("Sync in progress..."));
-			$this->UpdateFormField("ForceSync", "visible", false);
 
 			//Build the add/update/delete queue. Will also update the fileCache!
 			$fileQueue = $this->CalculateFileQueue($fileCache);
@@ -492,7 +497,10 @@
 				$this->SendDebug("Sync", "Upload will start in 10 seconds...", 0);
 				$this->SetTimerInterval("Upload", 10 * 1000);
 			} else {
-				$this->SendDebug("Sync", "Done. Everything is up to date.", 0);
+				$this->SendDebug("Sync", "Done. Everything is up to date.", 0);				
+
+				$this->UpdateFormField("UploadProgress", "visible", false);
+				$this->UpdateFormField("ForceSync", "visible", true);				
 			}
 			
 			//Start ReSync. At least 60 minutes.
@@ -627,6 +635,7 @@
 				$this->UpdateFormField("UploadProgress", "caption", sprintf($this->Translate("Add: %d, Update: %d, Remove: %d"), sizeof($fileQueue["add"]), sizeof($fileQueue["update"]), sizeof($fileQueue["delete"])));
 			} else {
 				$this->UpdateFormField("UploadProgress", "visible", false);
+				$this->UpdateFormField("ForceSync", "visible", true);
 			}
 
 			//Save the updated FileCache
