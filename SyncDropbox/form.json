@@ -24,7 +24,7 @@
 		{ "type": "Button", "label": "Register", "onClick": "echo SDB_Register($id);" },
 		{ "type": "Label", "caption": "", "visible": false },
 		{ "type": "Label", "caption": "", "visible": false },
-		{ "type": "Label", "caption": "", "visible": false },
+		{ "type": "Label", "name": "BackupSize", "caption": "", "visible": false },
 		{ "type": "Label", "name": "LastFinishedSync", "caption": "", "visible": false },
 		{ "type": "Label", "caption": "" },
 		{ "type": "ProgressBar", "name": "UploadProgress", "current": 100, "indeterminate": true, "visible": false },

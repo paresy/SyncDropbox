@@ -417,10 +417,11 @@
 
 			$this->SendDebug("Index", sprintf("Total Backup Size: %s, Upload Size: %s", $this->formatBytes($backupSize), $this->formatBytes($uploadSize)), 0);
 			
-			$this->SetBuffer("BackupSize", json_encode($backupSize));
-			$this->SetBuffer("BackupSkip", json_encode($backupSkip));
+			$this->SetBuffer("BackupSize", $backupSize);
+			$this->SetBuffer("BackupSkip", $backupSkip);
 			
 			//Send new Backup Size
+			$this->UpdateFormField("BackupSize", "visible", true);
 			$this->UpdateFormField("BackupSize", "caption", $this->Translate("Backup Size") . ": " . $this->formatBytes($this->GetBuffer("BackupSize")));
 
 			return $fileQueue;
