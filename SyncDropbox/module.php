@@ -618,8 +618,8 @@
 				
 				$this->SetTimerInterval("Upload", 1000);
 			} else if(sizeof($fileQueue["delete"]) > 0) {
-				//Delete from Dropbox
-				$this->SendDebug("Upload", sprintf("Deleting file... %s", $fileQueue["delete"][0]), 0);
+				//Delete from Dropbox (Remove first path element to prevent leaking the license username)
+				$this->SendDebug("Upload", sprintf("Deleting file... %s", substr($fileQueue["delete"][0], strpos($fileQueue["delete"][0], "/", 1) + 1)), 0);
 				$dropbox->files->delete($fileQueue["delete"][0]);
 				
 				//Update uploaded file in fileCache
