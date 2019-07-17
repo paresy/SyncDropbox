@@ -25,7 +25,7 @@
 		{ "type": "Label", "caption": "", "visible": false },
 		{ "type": "Label", "caption": "", "visible": false },
 		{ "type": "Label", "caption": "", "visible": false },
-		{ "type": "Label", "name": "LastFinishedUpload", "caption": "", "visible": false },
+		{ "type": "Label", "name": "LastFinishedSync", "caption": "", "visible": false },
 		{ "type": "Label", "caption": "" },
 		{ "type": "ProgressBar", "name": "UploadProgress", "current": 100, "indeterminate": true, "visible": false },
 		{ "type": "Button", "name": "ForceSync", "caption": "Force Sync", "onClick": "echo SDB_Sync($id);", "visible": false }

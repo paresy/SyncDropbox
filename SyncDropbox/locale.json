@@ -20,12 +20,13 @@
             "Owner": "Besitzer",
             "Used Space": "Benutzter Speicherplatz",
             "Backup Size": "Backupgröße",
-            "Last Upload": "Letzter Upload",
+            "Last Synchronization": "Letzte Synchronisierung",
             "Never": "Nie",
             "Sync in progress...": "Sync wird ausgeführt...",
             "Scanning... %s": "Scanne... %s",
             "ReSync in progress...": "ReSync wird ausgeführt...",
-            "Add: %d, Update: %d, Remove: %d": "Hinzufügen: %d, Aktualisieren: %d, Löschen: %d"
+            "Add: %d, Update: %d, Remove: %d": "Hinzufügen: %d, Aktualisieren: %d, Löschen: %d",
+            "Upload will start in 10 seconds...": "Upload startet in 10 Sekunden..."
         }
     }
 }

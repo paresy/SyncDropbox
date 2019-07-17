@@ -247,10 +247,10 @@
 					}
 					
 					$data->actions[5]->visible = true;
-					if(intval($this->GetBuffer("LastFinishedUpload")) > 0) {
-						$data->actions[5]->caption = $this->Translate("Last Upload") . ": " . date("d.m.Y H:i", intval($this->GetBuffer("LastFinishedUpload")));
+					if(intval($this->GetBuffer("LastFinishedSync")) > 0) {
+						$data->actions[5]->caption = $this->Translate("Last Synchronization") . ": " . date("d.m.Y H:i", intval($this->GetBuffer("LastFinishedSync")));
 					} else {
-						$data->actions[5]->caption = $this->Translate("Last Upload") . ": " . $this->Translate("Never");
+						$data->actions[5]->caption = $this->Translate("Last Synchronization") . ": " . $this->Translate("Never");
 					}
 
 					if($this->GetBuffer("FileQueue") != "") {
@@ -495,12 +495,14 @@
 			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 				//Start Upload
 				$this->SendDebug("Sync", "Upload will start in 10 seconds...", 0);
+				$this->UpdateFormField("UploadProgress", "caption", $this->Translate("Upload will start in 10 seconds..."));
 				$this->SetTimerInterval("Upload", 10 * 1000);
 			} else {
-				$this->SendDebug("Sync", "Done. Everything is up to date.", 0);				
-
+				$this->SendDebug("Sync", "Done. Everything is up to date.", 0);
+				$this->SetBuffer("LastFinishedSync", time());
+				$this->UpdateFormField("LastFinishedSync", "caption", $this->Translate("Last Synchronization") . ": " . date("d.m.Y H:i", time()));
 				$this->UpdateFormField("UploadProgress", "visible", false);
-				$this->UpdateFormField("ForceSync", "visible", true);				
+				$this->UpdateFormField("ForceSync", "visible", true);
 			}
 			
 			//Start ReSync. At least 60 minutes.
@@ -557,6 +559,10 @@
 				$this->SetTimerInterval("Upload", 10 * 1000);
 			} else {
 				$this->SendDebug("ReSync", "Done. Everything is up to date.", 0);
+				$this->SetBuffer("LastFinishedSync", time());
+				$this->UpdateFormField("LastFinishedSync", "caption", $this->Translate("Last Synchronization") . ": " . date("d.m.Y H:i", time()));
+				$this->UpdateFormField("UploadProgress", "visible", false);
+				$this->UpdateFormField("ForceSync", "visible", true);
 			}
 			
 		}
@@ -623,10 +629,8 @@
 				//We are done
 				$this->SendDebug("Upload", "Finished", 0);
 				$this->SetTimerInterval("Upload", 0);
-				$this->SetBuffer("LastFinishedUpload", time());
-
-				//Send finished
-				$this->UpdateFormField("LastFinishedUpload", "caption", "Last Upload:" . " " . date("d.m.Y H:i", time()));
+				$this->SetBuffer("LastFinishedSync", time());
+				$this->UpdateFormField("LastFinishedSync", "caption", $this->Translate("Last Synchronization") . ": " . date("d.m.Y H:i", time()));
 			}
 			
 			//Show progress if there is anything left to do
