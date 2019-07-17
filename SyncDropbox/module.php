@@ -559,8 +559,9 @@
 			//Start Upload if there is anything to do
 			if(sizeof($fileQueue["add"]) > 0 || sizeof($fileQueue["update"]) > 0 || sizeof($fileQueue["delete"]) > 0) {
 				//Start Upload
-				$this->SendDebug("ReSync", "Upload will start in 10 seconds...", 0);			
+				$this->SendDebug("ReSync", "Upload will start in 10 seconds...", 0);
 				$this->SetTimerInterval("Upload", 10 * 1000);
+				$this->UpdateFormField("UploadProgress", "caption", $this->Translate("Upload will start in 10 seconds..."));
 			} else {
 				$this->SendDebug("ReSync", "Done. Everything is up to date.", 0);
 				$this->SetBuffer("LastFinishedSync", time());
