@@ -275,7 +275,7 @@
 		private function IgnoreFile($file) {
 			
 			//Always compare lower case
-			$file = strtolower($file);
+			$file = mb_strtolower($file);
 			
 			//Check against file filter
 			if($this->ReadPropertyString("PathFilter") != "") {
@@ -370,7 +370,7 @@
 						$searchDir($dir . $file . "/");
 					} else {
 						if(!$this->IgnoreFile($dir . $file)) {
-							$touchedFiles[] = strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file);
+							$touchedFiles[] = mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file);
 							
 							$filesize = filesize($baseDir . $dir . $file);
 	
@@ -386,20 +386,20 @@
 								$backupSize += $filesize;
 								
 								//Add any new files
-								if(!isset($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
+								if(!isset($fileCache[mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
 									$fileQueue["add"][] = $dir . $file;
 									$uploadSize += $filesize;
 								} else {
 									//First sync. Lets match the hash
-									if(is_string($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
-										if($this->dropbox_hash_file($baseDir . $dir . $file) != $fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]) {
+									if(is_string($fileCache[mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
+										if($this->dropbox_hash_file($baseDir . $dir . $file) != $fileCache[mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]) {
 											$fileQueue["update"][] = $dir . $file;
 											$uploadSize += $filesize;
 										} else {
-											$fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)] = filemtime($baseDir . $dir . $file);
+											$fileCache[mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)] = filemtime($baseDir . $dir . $file);
 										}
-									} elseif(is_int($fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
-										if(filemtime($baseDir . $dir . $file) != $fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]) {
+									} elseif(is_int($fileCache[mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)])) {
+										if(filemtime($baseDir . $dir . $file) != $fileCache[mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $dir . $file)]) {
 											$fileQueue["update"][] = $dir . $file;
 											$uploadSize += $filesize;
 										}
@@ -459,7 +459,7 @@
 			
 			//Only update file cache if the target folder already exists
 			foreach ($targets["entries"] as $target) {
-				if($target["path_lower"] == strtolower("/" . $this->GetDestinationFolder())) {
+				if($target["path_lower"] == mb_strtolower("/" . $this->GetDestinationFolder())) {
 					$files = NULL;
 					while($files == NULL || $files["has_more"]) {
 						if($files == NULL) {
@@ -599,7 +599,7 @@
 				$dropbox->files->upload("/" . $this->GetDestinationFolder() . "/" . $fileQueue["add"][0], $baseDir . $fileQueue["add"][0]);
 				
 				//Add uploaded file to fileCache
-				$fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $fileQueue["add"][0])] = filemtime($baseDir . $fileQueue["add"][0]);
+				$fileCache[mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $fileQueue["add"][0])] = filemtime($baseDir . $fileQueue["add"][0]);
 				
 				//Remove successful upload
 				array_shift($fileQueue["add"]);
@@ -612,7 +612,7 @@
 				$dropbox->files->upload("/" . $this->GetDestinationFolder() . "/" . $fileQueue["update"][0], $baseDir . $fileQueue["update"][0], "overwrite");
 				
 				//Update uploaded file in fileCache
-				$fileCache[strtolower("/" . $this->GetDestinationFolder() . "/" . $fileQueue["update"][0])] = filemtime($baseDir . $fileQueue["update"][0]);
+				$fileCache[mb_strtolower("/" . $this->GetDestinationFolder() . "/" . $fileQueue["update"][0])] = filemtime($baseDir . $fileQueue["update"][0]);
 				
 				//Remove successful upload
 				array_shift($fileQueue["update"]);
@@ -624,7 +624,7 @@
 				$dropbox->files->delete($fileQueue["delete"][0]);
 				
 				//Update uploaded file in fileCache
-				unset($fileCache[strtolower($fileQueue["delete"][0])]);
+				unset($fileCache[mb_strtolower($fileQueue["delete"][0])]);
 				
 				//Remove successful upload
 				array_shift($fileQueue["delete"]);
