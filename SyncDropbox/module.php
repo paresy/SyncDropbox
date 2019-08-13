@@ -40,7 +40,10 @@
 			//Never delete this line!
 			parent::ApplyChanges();
 			
-			$this->RegisterOAuth($this->oauthIdentifer);
+			// Only call this in READY state. On startup the WebOAuth instance might not be available yet
+			if (IPS_GetKernelRunlevel() == KR_READY) {
+				$this->RegisterOAuth($this->oauthIdentifer);
+			}
 
 			if(!$this->ReadPropertyBoolean("Active")) {
 				$this->SetTimerInterval("Sync", 0);
