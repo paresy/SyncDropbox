@@ -24,7 +24,7 @@ Das Modul lädt alle relevanten Einstellungen und Daten periodisch in Ihr Dropbo
 ### 3. Software-Installation
 
 - Über den Modul Store das Modul 'Sync (Dropbox)' installieren.
-- Alternativ über das Modul Control folgende URL hinzufügen: ´https://github.com/paresy/SyncDropbox`
+- Alternativ über das Modul Control folgende URL hinzufügen: https://github.com/paresy/SyncDropbox
 
 ### 4. Einrichten der Instanzen in IP-Symcon
 
