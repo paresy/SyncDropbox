@@ -10,5 +10,6 @@
 	"parentRequirements": [],
 	"childRequirements": [],
 	"implemented": [],
-	"prefix": "SDB"
+	"prefix": "SDB",
+    "url": "https://github.com/paresy/SyncDropbox/tree/master/SyncDropbox"
 }
