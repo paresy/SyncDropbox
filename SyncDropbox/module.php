@@ -245,7 +245,7 @@ declare(strict_types=1);
 
                     if (intval($this->GetBuffer('BackupSize')) > 0) {
                         $data->actions[4]->visible = true;
-                        $data->actions[4]->caption = $this->Translate('Backup Size') . ': ' . $this->formatBytes($this->GetBuffer('BackupSize'));
+                        $data->actions[4]->caption = $this->Translate('Backup Size') . ': ' . $this->formatBytes(intval($this->GetBuffer('BackupSize')));
                     }
 
                     $data->actions[5]->visible = true;
@@ -420,7 +420,7 @@ declare(strict_types=1);
 
             //Send new Backup Size
             $this->UpdateFormField('BackupSize', 'visible', true);
-            $this->UpdateFormField('BackupSize', 'caption', $this->Translate('Backup Size') . ': ' . $this->formatBytes($this->GetBuffer('BackupSize')));
+            $this->UpdateFormField('BackupSize', 'caption', $this->Translate('Backup Size') . ': ' . $this->formatBytes(intval($this->GetBuffer('BackupSize'))));
 
             return $fileQueue;
         }
