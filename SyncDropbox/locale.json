@@ -26,7 +26,9 @@
             "Scanning... %s": "Scanne... %s",
             "ReSync in progress...": "ReSync wird ausgeführt...",
             "Add: %d, Update: %d, Remove: %d": "Hinzufügen: %d, Aktualisieren: %d, Löschen: %d",
-            "Upload will start in 10 seconds...": "Upload startet in 10 Sekunden..."
+            "Upload will start in 10 seconds...": "Upload startet in 10 Sekunden...",
+            "Last finished backup": "Letztes abgeschlossenes Backup",
+            "Transferred Megabytes": "Übertragene Megabytes"
         }
     }
 }

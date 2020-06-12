@@ -27,9 +27,19 @@ declare(strict_types=1);
 
             $this->RegisterPropertyInteger('ReSyncInterval', 60); //In Minutes
 
+            $this->RegisterVariableInteger("LastFinishedBackup", $this->Translate("Last finished backup"), "UnixTimestamp", 0);
+
+            if(!IPS_VariableProfileExists("Megabytes.Dropbox")) {
+                IPS_CreateVariableProfile("Megabytes.Dropbox", VARIABLETYPE_FLOAT);
+                IPS_SetVariableProfileText("Megabytes.Dropbox", "", " MB");
+                IPS_SetVariableProfileDigits("Megabytes.Dropbox", 2);
+            }
+
+            $this->RegisterVariableFloat("TransferredMegabytes", $this->Translate("Transferred Megabytes"), "Megabytes.Dropbox", 1);
+            
             //Start first Sync after a short wait period (will be set in ApplyChanges)
             $this->RegisterTimer('Sync', 0, "SDB_Sync(\$_IPS['TARGET']);");
-
+            
             //ReSync is done after within the defined interval the first Sync
             //ReSync will not be started if an Upload is currently running
             $this->RegisterTimer('ReSync', 0, "SDB_ReSync(\$_IPS['TARGET']);");
@@ -599,6 +609,9 @@ declare(strict_types=1);
                 //Remove successful upload
                 array_shift($fileQueue['add']);
 
+                //Add to upload statistic
+                $this->SetValue("TransferredMegabytes", $this->GetValue("TransferredMegabytes") + (filesize($baseDir . $fileQueue['add'][0]) / 1024 / 1024));
+                
                 //Start timer for next upload
                 $this->SetTimerInterval('Upload', 1000);
             } elseif (count($fileQueue['update']) > 0) {
@@ -612,6 +625,9 @@ declare(strict_types=1);
                 //Remove successful upload
                 array_shift($fileQueue['update']);
 
+                //Add to upload statistic
+                $this->SetValue("TransferredMegabytes", $this->GetValue("TransferredMegabytes") + (filesize($baseDir . $fileQueue['update'][0]) / 1024 / 1024));
+                
                 $this->SetTimerInterval('Upload', 1000);
             } elseif (count($fileQueue['delete']) > 0) {
                 //Delete from Dropbox (Remove first path element to prevent leaking the license username)
@@ -631,6 +647,9 @@ declare(strict_types=1);
                 $this->SetTimerInterval('Upload', 0);
                 $this->SetBuffer('LastFinishedSync', time());
                 $this->UpdateFormField('LastFinishedSync', 'caption', $this->Translate('Last Synchronization') . ': ' . date('d.m.Y H:i', time()));
+                
+                //Update variable with last finished backup timestamp
+                $this->SetValue('LastFinishedBackup', time());
             }
 
             //Show progress if there is anything left to do
