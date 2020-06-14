@@ -606,11 +606,11 @@ declare(strict_types=1);
                 //Add uploaded file to fileCache
                 $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['add'][0])] = filemtime($baseDir . $fileQueue['add'][0]);
 
-                //Remove successful upload
-                array_shift($fileQueue['add']);
-
                 //Add to upload statistic
                 $this->SetValue('TransferredMegabytes', $this->GetValue('TransferredMegabytes') + (filesize($baseDir . $fileQueue['add'][0]) / 1024 / 1024));
+
+                //Remove successful upload
+                array_shift($fileQueue['add']);
 
                 //Start timer for next upload
                 $this->SetTimerInterval('Upload', 1000);
@@ -622,11 +622,11 @@ declare(strict_types=1);
                 //Update uploaded file in fileCache
                 $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['update'][0])] = filemtime($baseDir . $fileQueue['update'][0]);
 
-                //Remove successful upload
-                array_shift($fileQueue['update']);
-
                 //Add to upload statistic
                 $this->SetValue('TransferredMegabytes', $this->GetValue('TransferredMegabytes') + (filesize($baseDir . $fileQueue['update'][0]) / 1024 / 1024));
+
+                //Remove successful upload
+                array_shift($fileQueue['update']);
 
                 $this->SetTimerInterval('Upload', 1000);
             } elseif (count($fileQueue['delete']) > 0) {
