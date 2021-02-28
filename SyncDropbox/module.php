@@ -99,15 +99,16 @@ declare(strict_types=1);
             }
         }
 
-        private function GetToken() {
+        private function GetToken()
+        {
             //Prefer attribute if it is set
-            if($this->ReadAttributeString('Token')) {
+            if ($this->ReadAttributeString('Token')) {
                 return $this->ReadAttributeString('Token');
             }
             //Fallback to legacy property value
             return $this->ReadPropertyString('Token');
         }
-        
+
         /**
          * This function will be called by the register button on the property page!
          */
@@ -159,7 +160,7 @@ declare(strict_types=1);
                 $this->SendDebug('ProcessOAuthData', "OK! Let's save the Access Token permanently", 0);
 
                 $this->WriteAttributeString('Token', $token);
-                $this->UpdateFormField('Token', 'caption', "Token: " . substr($token, 0, 16) . "...");
+                $this->UpdateFormField('Token', 'caption', 'Token: ' . substr($token, 0, 16) . '...');
             } else {
 
                 //Just print raw post data!
@@ -255,10 +256,10 @@ declare(strict_types=1);
 
                     //Hide the register button
                     $data->actions[1]->visible = false;
-                    
+
                     //Show token excerpt
-                    if($this->GetToken()) {
-                        $data->actions[2]->caption = $this->Translate("Token") . ": " . substr($this->GetToken(), 0, 16) . "...";
+                    if ($this->GetToken()) {
+                        $data->actions[2]->caption = $this->Translate('Token') . ': ' . substr($this->GetToken(), 0, 16) . '...';
                     }
 
                     $space = $dropbox->users->get_space_usage();
@@ -458,7 +459,7 @@ declare(strict_types=1);
             if (!$this->ReadPropertyBoolean('Active')) {
                 return;
             }
-            
+
             if (!$this->GetToken()) {
                 return;
             }
