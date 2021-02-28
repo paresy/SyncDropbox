@@ -28,7 +28,9 @@
             "Add: %d, Update: %d, Remove: %d": "Hinzufügen: %d, Aktualisieren: %d, Löschen: %d",
             "Upload will start in 10 seconds...": "Upload startet in 10 Sekunden...",
             "Last finished backup": "Letztes abgeschlossenes Backup",
-            "Transferred Megabytes": "Übertragene Megabytes"
+            "Transferred Megabytes": "Übertragene Megabytes",
+            "Token: Not registered yet": "Token: Noch nicht registriert",
+            "Token": "Token"
         }
     }
 }

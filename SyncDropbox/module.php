@@ -17,7 +17,9 @@ declare(strict_types=1);
 
             $this->RegisterPropertyBoolean('Active', true);
 
+            //Legacy. We want to use an Attribute instead.
             $this->RegisterPropertyString('Token', '');
+            $this->RegisterAttributeString('Token', '');
 
             $this->RegisterPropertyInteger('TimeLimit', 90);
 
@@ -97,6 +99,15 @@ declare(strict_types=1);
             }
         }
 
+        private function GetToken() {
+            //Prefer attribute if it is set
+            if($this->ReadAttributeString('Token')) {
+                return $this->ReadAttributeString('Token');
+            }
+            //Fallback to legacy property value
+            return $this->ReadPropertyString('Token');
+        }
+        
         /**
          * This function will be called by the register button on the property page!
          */
@@ -147,8 +158,8 @@ declare(strict_types=1);
 
                 $this->SendDebug('ProcessOAuthData', "OK! Let's save the Access Token permanently", 0);
 
-                IPS_SetProperty($this->InstanceID, 'Token', $token);
-                IPS_ApplyChanges($this->InstanceID);
+                $this->WriteAttributeString('Token', $token);
+                $this->UpdateFormField('Token', 'caption', "Token: " . substr($token, 0, 16) . "...");
             } else {
 
                 //Just print raw post data!
@@ -233,8 +244,8 @@ declare(strict_types=1);
         {
             $data = json_decode(file_get_contents(__DIR__ . '/form.json'));
 
-            if ($this->ReadPropertyString('Token')) {
-                $dropbox = new Dropbox\Dropbox($this->ReadPropertyString('Token'));
+            if ($this->GetToken()) {
+                $dropbox = new Dropbox\Dropbox($this->GetToken());
                 $account = $dropbox->users->get_current_account();
                 if (!$account || isset($account['error_summary'])) {
 
@@ -244,36 +255,41 @@ declare(strict_types=1);
 
                     //Hide the register button
                     $data->actions[1]->visible = false;
+                    
+                    //Show token excerpt
+                    if($this->GetToken()) {
+                        $data->actions[2]->caption = $this->Translate("Token") . ": " . substr($this->GetToken(), 0, 16) . "...";
+                    }
 
                     $space = $dropbox->users->get_space_usage();
 
-                    $data->actions[2]->visible = true;
-                    $data->actions[2]->caption = $this->Translate('Owner') . ': ' . $account['name']['display_name'];
-
                     $data->actions[3]->visible = true;
-                    $data->actions[3]->caption = $this->Translate('Used Space') . ': ' . $this->formatBytes($space['used']) . ' / ' . $this->formatBytes($space['allocation']['allocated']);
+                    $data->actions[3]->caption = $this->Translate('Owner') . ': ' . $account['name']['display_name'];
+
+                    $data->actions[4]->visible = true;
+                    $data->actions[4]->caption = $this->Translate('Used Space') . ': ' . $this->formatBytes($space['used']) . ' / ' . $this->formatBytes($space['allocation']['allocated']);
 
                     if (intval($this->GetBuffer('BackupSize')) > 0) {
-                        $data->actions[4]->visible = true;
-                        $data->actions[4]->caption = $this->Translate('Backup Size') . ': ' . $this->formatBytes(intval($this->GetBuffer('BackupSize')));
+                        $data->actions[5]->visible = true;
+                        $data->actions[5]->caption = $this->Translate('Backup Size') . ': ' . $this->formatBytes(intval($this->GetBuffer('BackupSize')));
                     }
 
-                    $data->actions[5]->visible = true;
+                    $data->actions[6]->visible = true;
                     if (intval($this->GetBuffer('LastFinishedSync')) > 0) {
-                        $data->actions[5]->caption = $this->Translate('Last Synchronization') . ': ' . date('d.m.Y H:i', intval($this->GetBuffer('LastFinishedSync')));
+                        $data->actions[6]->caption = $this->Translate('Last Synchronization') . ': ' . date('d.m.Y H:i', intval($this->GetBuffer('LastFinishedSync')));
                     } else {
-                        $data->actions[5]->caption = $this->Translate('Last Synchronization') . ': ' . $this->Translate('Never');
+                        $data->actions[6]->caption = $this->Translate('Last Synchronization') . ': ' . $this->Translate('Never');
                     }
 
                     if ($this->GetBuffer('FileQueue') != '') {
                         $fileQueue = json_decode(gzdecode($this->GetBuffer('FileQueue')), true);
                         if (count($fileQueue['add']) > 0 || count($fileQueue['update']) > 0 || count($fileQueue['delete']) > 0) {
-                            $data->actions[7]->visible = true;
-                        } else {
                             $data->actions[8]->visible = true;
+                        } else {
+                            $data->actions[9]->visible = true;
                         }
                     } else {
-                        $data->actions[8]->visible = true;
+                        $data->actions[9]->visible = true;
                     }
                 }
             }
@@ -442,6 +458,10 @@ declare(strict_types=1);
             if (!$this->ReadPropertyBoolean('Active')) {
                 return;
             }
+            
+            if (!$this->GetToken()) {
+                return;
+            }
 
             //Show some progress
             $this->UpdateFormField('UploadProgress', 'visible', true);
@@ -450,7 +470,7 @@ declare(strict_types=1);
 
             set_time_limit($this->ReadPropertyInteger('TimeLimit'));
 
-            $dropbox = new Dropbox\Dropbox($this->ReadPropertyString('Token'));
+            $dropbox = new Dropbox\Dropbox($this->GetToken());
 
             $targets = $dropbox->files->list_folder('', false);
 
@@ -587,7 +607,7 @@ declare(strict_types=1);
 
             set_time_limit($this->ReadPropertyInteger('TimeLimit'));
 
-            $dropbox = new Dropbox\Dropbox($this->ReadPropertyString('Token'));
+            $dropbox = new Dropbox\Dropbox($this->GetToken());
 
             $baseDir = IPS_GetKernelDir();
 

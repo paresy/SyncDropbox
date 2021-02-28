@@ -2,11 +2,10 @@
 	"elements":
 	[
 		{ "name": "Active", "type": "CheckBox", "caption": "Active" },
-		{ "name": "Token", "type": "ValidationTextBox", "caption": "Token" },
 		{
 			"type": "ExpansionPanel",
 			"caption": "Expert options",
-			"items": [		
+			"items": [
 				{ "type": "Label", "caption": "Raise the sync time limit if you have a lot of files" },
 				{ "name": "TimeLimit", "type": "NumberSpinner", "caption": "Time Limit", "suffix": "seconds" },
 				{ "type": "Label", "caption": "Please seperate several path filters with a semicolon" },
@@ -22,6 +21,7 @@
 	[
 		{ "type": "Label", "caption": "There seems to be something wrong. Please try to reregister.", "visible": false },
 		{ "type": "Button", "label": "Register", "onClick": "echo SDB_Register($id);" },
+		{ "type": "Label", "name": "Token", "caption": "Token: Not registered yet" },
 		{ "type": "Label", "caption": "", "visible": false },
 		{ "type": "Label", "caption": "", "visible": false },
 		{ "type": "Label", "name": "BackupSize", "caption": "", "visible": false },
