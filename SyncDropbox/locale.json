@@ -7,7 +7,7 @@
             "Raise the sync time limit if you have a lot of files": "Erhöhen Sie das Zeitlimit der Synchronisation, wenn Sie sehr viele Dateien haben",
             "Time Limit": "Zeitlimit",
             "seconds": "Sekunden",
-            "Please seperate several path filters with a semicolon": "Bitte trennen Sie verschiedene Filter durch ein Semikolon",
+            "Please separate several path filters with a semicolon": "Bitte trennen Sie verschiedene Filter durch ein Semikolon",
             "Path Filter": "Pfad-Filter",
             "Larger files will be ignored while uploading": "Größere Dateien werden beim Upload ignoriert",
             "Size Limit": "Größenlimit",
