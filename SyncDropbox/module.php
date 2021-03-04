@@ -245,6 +245,10 @@ declare(strict_types=1);
         {
             $data = json_decode(file_get_contents(__DIR__ . '/form.json'));
 
+            //This option is only relevant for older IP-Symcon versions. Since IP-Symcon 5.6 max_execution_time is always unlimited
+            $data->elements[1]->items[0]->visible = floatval(IPS_GetKernelVersion()) < 5.6;
+            $data->elements[1]->items[1]->visible = floatval(IPS_GetKernelVersion()) < 5.6;
+
             if ($this->GetToken()) {
                 $dropbox = new Dropbox\Dropbox($this->GetToken());
                 $account = $dropbox->users->get_current_account();
@@ -469,7 +473,9 @@ declare(strict_types=1);
             $this->UpdateFormField('UploadProgress', 'caption', $this->Translate('Sync in progress...'));
             $this->UpdateFormField('ForceSync', 'visible', false);
 
-            set_time_limit($this->ReadPropertyInteger('TimeLimit'));
+            if (floatval(IPS_GetKernelVersion()) < 5.6) {
+                set_time_limit($this->ReadPropertyInteger('TimeLimit'));
+            }
 
             $dropbox = new Dropbox\Dropbox($this->GetToken());
 
@@ -547,7 +553,9 @@ declare(strict_types=1);
                 return;
             }
 
-            set_time_limit($this->ReadPropertyInteger('TimeLimit'));
+            if (floatval(IPS_GetKernelVersion()) < 5.6) {
+                set_time_limit($this->ReadPropertyInteger('TimeLimit'));
+            }
 
             //Load the current FileQueue
             $fileQueue = json_decode(gzdecode($this->GetBuffer('FileQueue')), true);
@@ -606,7 +614,9 @@ declare(strict_types=1);
                 return;
             }
 
-            set_time_limit($this->ReadPropertyInteger('TimeLimit'));
+            if (floatval(IPS_GetKernelVersion()) < 5.6) {
+                set_time_limit($this->ReadPropertyInteger('TimeLimit'));
+            }
 
             $dropbox = new Dropbox\Dropbox($this->GetToken());
 
