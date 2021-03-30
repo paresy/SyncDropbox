@@ -15,7 +15,7 @@
 				{ "type": "Label", "caption": "Larger files will be ignored while uploading" },
 				{ "name": "SizeLimit", "type": "NumberSpinner", "caption": "Size Limit", "suffix": "MB" },
 				{ "type": "Label", "caption": "ReSync Interval. Minimum is 60 minutes" },
-				{ "name": "ReSyncInterval", "type": "NumberSpinner", "caption": "ReSync Interval", "suffix": "minutes" },
+				{ "name": "ReSyncInterval", "type": "NumberSpinner", "caption": "ReSync Interval", "suffix": "minutes" }
 			]
 		}
 	],
