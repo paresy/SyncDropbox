@@ -12,6 +12,7 @@
 
     class Dropbox {
         private static $token;
+        private static $timeout;
         public $auth;
         public $files;
         public $file_properties;
@@ -23,8 +24,9 @@
         public $app;
         public $client;
         
-        public function __construct($accesstoken) {
+        public function __construct($accesstoken, $timeout) {
             self::$token = $accesstoken;
+            self::$timeout = $timeout;
             $this->auth = new Auth();
             $this->files = new Files();
             $this->file_properties = new FileProperties();
@@ -45,6 +47,7 @@
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($ch, CURLOPT_TIMEOUT, self::$timeout);
             $r = curl_exec($ch);
             curl_close($ch);
             
@@ -65,6 +68,7 @@
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_USERPWD, "$app_key:$app_secret");
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($ch, CURLOPT_TIMEOUT, self::$timeout);
             $r = curl_exec($ch);
             curl_close($ch);
             return json_decode($r, true);

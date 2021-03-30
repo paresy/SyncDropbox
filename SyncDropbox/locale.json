@@ -30,7 +30,8 @@
             "Last finished backup": "Letztes abgeschlossenes Backup",
             "Transferred Megabytes": "Übertragene Megabytes",
             "Token: Not registered yet": "Token: Noch nicht registriert",
-            "Token": "Token"
+            "Upload limit in minutes per file. Default is 5 minutes": "Upload-Limitation in Minuten pro Datei. Standard ist 5 Minuten.",
+            "Upload Limit": "Upload-Limitation"
         }
     }
 }

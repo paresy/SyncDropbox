@@ -29,6 +29,8 @@ declare(strict_types=1);
 
             $this->RegisterPropertyInteger('ReSyncInterval', 60); //In Minutes
 
+            $this->RegisterPropertyInteger('UploadLimit', 5); //In Minutes
+
             $this->RegisterVariableInteger('LastFinishedBackup', $this->Translate('Last finished backup'), 'UnixTimestamp', 0);
 
             if (!IPS_VariableProfileExists('Megabytes.Dropbox')) {
@@ -250,7 +252,7 @@ declare(strict_types=1);
             $data->elements[1]->items[1]->visible = floatval(IPS_GetKernelVersion()) < 5.6;
 
             if ($this->GetToken()) {
-                $dropbox = new Dropbox\Dropbox($this->GetToken());
+                $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger("UploadLimit") * 60);
                 $account = $dropbox->users->get_current_account();
                 if (!$account || isset($account['error_summary'])) {
 
@@ -477,7 +479,7 @@ declare(strict_types=1);
                 set_time_limit($this->ReadPropertyInteger('TimeLimit'));
             }
 
-            $dropbox = new Dropbox\Dropbox($this->GetToken());
+            $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger("UploadLimit") * 60);
 
             $targets = $dropbox->files->list_folder('', false);
 
@@ -618,7 +620,7 @@ declare(strict_types=1);
                 set_time_limit($this->ReadPropertyInteger('TimeLimit'));
             }
 
-            $dropbox = new Dropbox\Dropbox($this->GetToken());
+            $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger("UploadLimit") * 60);
 
             $baseDir = IPS_GetKernelDir();
 
