@@ -320,6 +320,11 @@ declare(strict_types=1);
                 }
             }
 
+            //Any non UTF-8 filename will break everything. Therefore we need to filter them
+            if (!mb_check_encoding($file, 'UTF-8')) {
+                return true;
+            }
+            
             //Some faulty scripts can produce invalid filenames that start with a backslash. Dropbox will not upload them
             if ($file[0] == '\\') {
                 return true;
