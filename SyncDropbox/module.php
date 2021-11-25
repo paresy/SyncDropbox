@@ -252,7 +252,7 @@ declare(strict_types=1);
             $data->elements[1]->items[1]->visible = floatval(IPS_GetKernelVersion()) < 5.6;
 
             if ($this->GetToken()) {
-                $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger("UploadLimit") * 60);
+                $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
                 $account = $dropbox->users->get_current_account();
                 if (!$account || isset($account['error_summary'])) {
 
@@ -324,7 +324,7 @@ declare(strict_types=1);
             if (!mb_check_encoding($file, 'UTF-8')) {
                 return true;
             }
-            
+
             //Some faulty scripts can produce invalid filenames that start with a backslash. Dropbox will not upload them
             if ($file[0] == '\\') {
                 return true;
@@ -484,7 +484,7 @@ declare(strict_types=1);
                 set_time_limit($this->ReadPropertyInteger('TimeLimit'));
             }
 
-            $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger("UploadLimit") * 60);
+            $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
 
             $targets = $dropbox->files->list_folder('', false);
 
@@ -625,7 +625,7 @@ declare(strict_types=1);
                 set_time_limit($this->ReadPropertyInteger('TimeLimit'));
             }
 
-            $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger("UploadLimit") * 60);
+            $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
 
             $baseDir = IPS_GetKernelDir();
 
