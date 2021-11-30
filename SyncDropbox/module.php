@@ -526,16 +526,13 @@ declare(strict_types=1);
             //Build the add/update/delete queue. Will also update the fileCache!
             $fileQueue = $this->CalculateFileQueue($fileCache);
 
-            //Show file queue in debug
-            $this->SendDebug('FileQueue', print_r($fileQueue, true), 0);
-            
             //Save all entries for partial sync
-            $compressedFileCache = gzencode(json_encode($fileCache));
+            $compressedFileCache = gzencode(json_encode($fileCache, JSON_THROW_ON_ERROR));
             $this->SendDebug('Sync', sprintf('We have %d files in your Dropbox (FileCache: %s)', count($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
             $this->SetBuffer('FileCache', $compressedFileCache);
 
             //Save the FileQueue which the Upload function will process
-            $compressedFileQueue = gzencode(json_encode($fileQueue));
+            $compressedFileQueue = gzencode(json_encode($fileQueue, JSON_THROW_ON_ERROR));
             $this->SendDebug('Sync', sprintf('Sync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)', count($fileQueue['add']), count($fileQueue['update']), count($fileQueue['delete']), $this->formatBytes(strlen($compressedFileQueue))), 0);
             $this->SetBuffer('FileQueue', $compressedFileQueue);
 
@@ -592,12 +589,12 @@ declare(strict_types=1);
             $fileQueue = $this->CalculateFileQueue($fileCache);
 
             //Save the updated FileCache
-            $compressedFileCache = gzencode(json_encode($fileCache));
+            $compressedFileCache = gzencode(json_encode($fileCache, JSON_THROW_ON_ERROR));
             $this->SendDebug('ReSync', sprintf('We have %d files in your Dropbox (FileCache: %s)', count($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
             $this->SetBuffer('FileCache', $compressedFileCache);
 
             //Save the updated FileQueue
-            $compressedFileQueue = gzencode(json_encode($fileQueue));
+            $compressedFileQueue = gzencode(json_encode($fileQueue, JSON_THROW_ON_ERROR));
             $this->SendDebug('ReSync', sprintf('ReSync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)', count($fileQueue['add']), count($fileQueue['update']), count($fileQueue['delete']), $this->formatBytes(strlen($compressedFileQueue))), 0);
             $this->SetBuffer('FileQueue', $compressedFileQueue);
 
@@ -703,10 +700,10 @@ declare(strict_types=1);
             }
 
             //Save the updated FileCache
-            $this->SetBuffer('FileCache', gzencode(json_encode($fileCache)));
+            $this->SetBuffer('FileCache', gzencode(json_encode($fileCache, JSON_THROW_ON_ERROR)));
 
             //Save the updated FileQueue
-            $this->SetBuffer('FileQueue', gzencode(json_encode($fileQueue)));
+            $this->SetBuffer('FileQueue', gzencode(json_encode($fileQueue, JSON_THROW_ON_ERROR)));
 
             //Save timestamp of last action
             $this->SetBuffer('LastUpload', time());
