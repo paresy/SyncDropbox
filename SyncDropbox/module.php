@@ -320,7 +320,7 @@ declare(strict_types=1);
             )*$%xs', $file)) {
                 return true;
             }
-            
+
             //Always compare lower case
             $file = mb_strtolower($file);
 
