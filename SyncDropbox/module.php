@@ -306,20 +306,6 @@ declare(strict_types=1);
 
         private function IgnoreFile($file)
         {
-
-            //Always compare lower case
-            $file = mb_strtolower($file);
-
-            //Check against file filter
-            if ($this->ReadPropertyString('PathFilter') != '') {
-                $filters = explode(';', $this->ReadPropertyString('PathFilter'));
-                foreach ($filters as $filter) {
-                    if (substr($file, 0, strlen($filter)) == $filter) {
-                        return true;
-                    }
-                }
-            }
-
             //Any non UTF-8 filename will break everything. Therefore we need to filter them
             //See: https://stackoverflow.com/a/1523574/10288655 (Regex seems to be faster than mb_check_encoding)
             if (!preg_match('%^(?:
@@ -333,6 +319,19 @@ declare(strict_types=1);
             | \xF4[\x80-\x8F][\x80-\xBF]{2}      # plane 16
             )*$%xs', $file)) {
                 return true;
+            }
+            
+            //Always compare lower case
+            $file = mb_strtolower($file);
+
+            //Check against file filter
+            if ($this->ReadPropertyString('PathFilter') != '') {
+                $filters = explode(';', $this->ReadPropertyString('PathFilter'));
+                foreach ($filters as $filter) {
+                    if (substr($file, 0, strlen($filter)) == $filter) {
+                        return true;
+                    }
+                }
             }
 
             //Some faulty scripts can produce invalid filenames that start with a backslash. Dropbox will not upload them
