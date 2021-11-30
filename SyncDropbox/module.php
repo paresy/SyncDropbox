@@ -526,6 +526,9 @@ declare(strict_types=1);
             //Build the add/update/delete queue. Will also update the fileCache!
             $fileQueue = $this->CalculateFileQueue($fileCache);
 
+            //Show file queue in debug
+            $this->SendDebug('FileQueue', print_r($fileQueue, true), 0);
+            
             //Save all entries for partial sync
             $compressedFileCache = gzencode(json_encode($fileCache));
             $this->SendDebug('Sync', sprintf('We have %d files in your Dropbox (FileCache: %s)', count($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
