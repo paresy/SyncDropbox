@@ -10,6 +10,9 @@ declare(strict_types=1);
         //Please contact us to register for an identifier: https://www.symcon.de/kontakt/#OAuth
         private $oauthIdentifer = 'sync_dropbox';
 
+        //You normally do not need to change this
+        private $oauthServer = 'oauth.ipmagic.de';
+
         public function Create()
         {
             //Never delete this line!
@@ -20,6 +23,9 @@ declare(strict_types=1);
             //Legacy. We want to use an Attribute instead.
             $this->RegisterPropertyString('Token', '');
             $this->RegisterAttributeString('Token', '');
+
+            //Flag if the Token is the old persistent one, or a Refresh Token
+            $this->RegisterAttributeBoolean('Refresh', false);
 
             $this->RegisterPropertyInteger('TimeLimit', 90);
 
@@ -101,16 +107,6 @@ declare(strict_types=1);
             }
         }
 
-        private function GetToken()
-        {
-            //Prefer attribute if it is set
-            if ($this->ReadAttributeString('Token')) {
-                return $this->ReadAttributeString('Token');
-            }
-            //Fallback to legacy property value
-            return $this->ReadPropertyString('Token');
-        }
-
         /**
          * This function will be called by the register button on the property page!
          */
@@ -118,12 +114,12 @@ declare(strict_types=1);
         {
 
             //Return everything which will open the browser
-            return 'https://oauth.ipmagic.de/authorize/' . $this->oauthIdentifer . '?username=' . urlencode(IPS_GetLicensee());
+            return 'https://' . $this->oauthServer . '/authorize/' . $this->oauthIdentifer . '?username=' . urlencode(IPS_GetLicensee());
         }
 
-        private function FetchAccessToken($code)
+        private function FetchRefreshToken($code)
         {
-            $this->SendDebug('FetchAccessToken', 'Use Authentication Code to get our precious Access Token!', 0);
+            $this->SendDebug('FetchRefreshToken', 'Use Authentication Code to get our precious Refresh Token!', 0);
 
             //Exchange our Authentication Code for a permanent Refresh Token and a temporary Access Token
             $options = [
@@ -134,15 +130,19 @@ declare(strict_types=1);
                 ]
             ];
             $context = stream_context_create($options);
-            $result = file_get_contents('https://oauth.ipmagic.de/access_token/' . $this->oauthIdentifer, false, $context);
+            $result = file_get_contents('https://' . $this->oauthServer . '/access_token/' . $this->oauthIdentifer, false, $context);
 
             $data = json_decode($result);
 
-            if (!isset($data->token_type) || $data->token_type != 'bearer') {
+            if (!isset($data->token_type) || strtolower($data->token_type) != 'bearer') {
                 die('Bearer Token expected');
             }
 
-            return $data->access_token;
+            //Save temporary access token
+            $this->FetchAccessToken($data->access_token, time() + $data->expires_in);
+
+            //Return RefreshToken
+            return $data->refresh_token;
         }
 
         /**
@@ -157,17 +157,85 @@ declare(strict_types=1);
                     die('Authorization Code expected');
                 }
 
-                $token = $this->FetchAccessToken($_GET['code']);
+                $token = $this->FetchRefreshToken($_GET['code']);
 
-                $this->SendDebug('ProcessOAuthData', "OK! Let's save the Access Token permanently", 0);
+                $this->SendDebug('ProcessOAuthData', "OK! Let's save the Refresh Token permanently", 0);
 
                 $this->WriteAttributeString('Token', $token);
+                $this->WriteAttributeBoolean('Refresh', true);
                 $this->UpdateFormField('Token', 'caption', 'Token: ' . substr($token, 0, 16) . '...');
             } else {
 
                 //Just print raw post data!
                 echo file_get_contents('php://input');
             }
+        }
+
+        private function FetchAccessToken($Token = '', $Expires = 0)
+        {
+
+            //Return our persistent Token (for compatibility with old DropBox Tokens)
+            if (!$this->ReadAttributeBoolean('Refresh')) {
+                //Prefer attribute if it is set
+                if ($this->ReadAttributeString('Token')) {
+                    return $this->ReadAttributeString('Token');
+                }
+                //Fallback to legacy property value
+                return $this->ReadPropertyString('Token');
+            }
+
+            //Exchange our Refresh Token for a temporary Access Token
+            if ($Token == '' && $Expires == 0) {
+
+                //Check if we already have a valid Token in cache
+                $data = $this->GetBuffer('AccessToken');
+                if ($data != '') {
+                    $data = json_decode($data);
+                    if (time() < $data->Expires) {
+                        $this->SendDebug('FetchAccessToken', 'OK! Access Token is valid until ' . date('d.m.y H:i:s', $data->Expires), 0);
+                        return $data->Token;
+                    }
+                }
+
+                $this->SendDebug('FetchAccessToken', 'Use Refresh Token to get new Access Token!', 0);
+
+                //If we slipped here we need to fetch the access token
+                $options = [
+                    'http' => [
+                        'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
+                        'method'  => 'POST',
+                        'content' => http_build_query(['refresh_token' => $this->ReadAttributeString('Token')])
+                    ]
+                ];
+                $context = stream_context_create($options);
+                $result = file_get_contents('https://' . $this->oauthServer . '/access_token/' . $this->oauthIdentifer, false, $context);
+
+                $data = json_decode($result);
+
+                if (!isset($data->token_type) || strtolower($data->token_type) != 'bearer') {
+                    die('Bearer Token expected');
+                }
+
+                //Update parameters to properly cache it in the next step
+                $Token = $data->access_token;
+                $Expires = time() + $data->expires_in;
+
+                //Update Refresh Token if we received one! (This is optional)
+                if (isset($data->refresh_token)) {
+                    $this->SendDebug('FetchAccessToken', "NEW! Let's save the updated Refresh Token permanently", 0);
+
+                    $this->WriteAttributeString('Token', $data->refresh_token);
+                    $this->UpdateFormField('Token', 'caption', 'Token: ' . substr($data->refresh_token, 0, 16) . '...');
+                }
+            }
+
+            $this->SendDebug('FetchAccessToken', 'CACHE! New Access Token is valid until ' . date('d.m.y H:i:s', $Expires), 0);
+
+            //Save current Token
+            $this->SetBuffer('AccessToken', json_encode(['Token' => $Token, 'Expires' => $Expires]));
+
+            //Return current Token
+            return $Token;
         }
 
         //Source: https://stackoverflow.com/questions/2510434/format-bytes-to-kilobytes-megabytes-gigabytes
@@ -248,11 +316,11 @@ declare(strict_types=1);
             $data = json_decode(file_get_contents(__DIR__ . '/form.json'));
 
             //This option is only relevant for older IP-Symcon versions. Since IP-Symcon 5.6 max_execution_time is always unlimited
-            $data->elements[1]->items[0]->visible = floatval(IPS_GetKernelVersion()) < 5.6;
-            $data->elements[1]->items[1]->visible = floatval(IPS_GetKernelVersion()) < 5.6;
+            $data->elements[1]->items[0]->visible = $this->HasTimeLimit();
+            $data->elements[1]->items[1]->visible = $this->HasTimeLimit();
 
-            if ($this->GetToken()) {
-                $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
+            if ($this->FetchAccessToken()) {
+                $dropbox = new Dropbox\Dropbox($this->FetchAccessToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
                 $account = $dropbox->users->get_current_account();
                 if (!$account || isset($account['error_summary'])) {
 
@@ -264,8 +332,8 @@ declare(strict_types=1);
                     $data->actions[1]->visible = false;
 
                     //Show token excerpt
-                    if ($this->GetToken()) {
-                        $data->actions[2]->caption = $this->Translate('Token') . ': ' . substr($this->GetToken(), 0, 16) . '...';
+                    if ($this->FetchAccessToken()) {
+                        $data->actions[2]->caption = $this->Translate('Token') . ': ' . substr($this->FetchAccessToken(), 0, 16) . '...';
                     }
 
                     $space = $dropbox->users->get_space_usage();
@@ -302,6 +370,11 @@ declare(strict_types=1);
             }
 
             return json_encode($data);
+        }
+
+        private function HasTimeLimit()
+        {
+            return IPS_GetKernelVersion() != '0.0' && floatval(IPS_GetKernelVersion()) < 5.6;
         }
 
         private function IgnoreFile($file)
@@ -390,7 +463,7 @@ declare(strict_types=1);
             return IPS_GetLicensee();
         }
 
-        private function CalculateFileQueue(&$fileCache)
+        private function CalculateFileQueue(& $fileCache)
         {
             $fileQueue = ['add' => [], 'update' => [], 'delete' => []];
 
@@ -480,7 +553,7 @@ declare(strict_types=1);
                 return;
             }
 
-            if (!$this->GetToken()) {
+            if (!$this->FetchAccessToken()) {
                 return;
             }
 
@@ -489,11 +562,11 @@ declare(strict_types=1);
             $this->UpdateFormField('UploadProgress', 'caption', $this->Translate('Sync in progress...'));
             $this->UpdateFormField('ForceSync', 'visible', false);
 
-            if (floatval(IPS_GetKernelVersion()) < 5.6) {
+            if ($this->HasTimeLimit()) {
                 set_time_limit($this->ReadPropertyInteger('TimeLimit'));
             }
 
-            $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
+            $dropbox = new Dropbox\Dropbox($this->FetchAccessToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
 
             $targets = $dropbox->files->list_folder('', false);
 
@@ -569,7 +642,7 @@ declare(strict_types=1);
                 return;
             }
 
-            if (floatval(IPS_GetKernelVersion()) < 5.6) {
+            if ($this->HasTimeLimit()) {
                 set_time_limit($this->ReadPropertyInteger('TimeLimit'));
             }
 
@@ -630,11 +703,11 @@ declare(strict_types=1);
                 return;
             }
 
-            if (floatval(IPS_GetKernelVersion()) < 5.6) {
+            if ($this->HasTimeLimit()) {
                 set_time_limit($this->ReadPropertyInteger('TimeLimit'));
             }
 
-            $dropbox = new Dropbox\Dropbox($this->GetToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
+            $dropbox = new Dropbox\Dropbox($this->FetchAccessToken(), $this->ReadPropertyInteger('UploadLimit') * 60);
 
             $baseDir = IPS_GetKernelDir();
 
