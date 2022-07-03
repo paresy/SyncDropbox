@@ -1,6 +1,6 @@
-# Dropbox Synchronization für IP-Symcon 5.x
+# Dropbox Synchronization für IP-Symcon 6.x
 
-[![IP-Symcon is awesome!](https://img.shields.io/badge/IP--Symcon-5.x-blue.svg)](https://www.symcon.de)
+[![IP-Symcon is awesome!](https://img.shields.io/badge/IP--Symcon-6.x-blue.svg)](https://www.symcon.de)
 [![Check Style](https://github.com/paresy/SyncDropbox/workflows/Check%20Style/badge.svg)](https://github.com/paresy/SyncDropbox/actions)
 [![Run Tests](https://github.com/paresy/SyncDropbox/workflows/Run%20Tests/badge.svg)](https://github.com/paresy/SyncDropbox/actions)
 
