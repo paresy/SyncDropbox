@@ -377,7 +377,7 @@ declare(strict_types=1);
             return IPS_GetKernelVersion() != '0.0' && floatval(IPS_GetKernelVersion()) < 5.6;
         }
 
-        private function IgnoreFile($file)
+        private function IgnorePath($file)
         {
             //Any non UTF-8 filename will break everything. Therefore we need to filter them
             //See: https://stackoverflow.com/a/1523574/10288655 (Regex seems to be faster than mb_check_encoding)
@@ -488,7 +488,7 @@ declare(strict_types=1);
                     }
 
                     //Ignore specified files and folders
-                    if ($this->IgnoreFile($dir . $file)) {
+                    if ($this->IgnorePath($dir . $file)) {
                         continue;
                     }
 
