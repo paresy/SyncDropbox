@@ -482,45 +482,51 @@ declare(strict_types=1);
 
                 $files = scandir($baseDir . $dir);
                 foreach ($files as $file) {
+                    //Ignore special folders
                     if ($file == '.' || $file == '..') {
-                        //Ignore special folders
-                    } elseif (is_dir($baseDir . $dir . $file)) {
+                        continue;
+                    }
+
+                    //Ignore specified files and folders
+                    if ($this->IgnoreFile($dir . $file)) {
+                        continue;
+                    }
+
+                    if (is_dir($baseDir . $dir . $file)) {
                         $searchDir($dir . $file . '/');
                     } else {
-                        if (!$this->IgnoreFile($dir . $file)) {
-                            $touchedFiles[] = mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file);
+                        $touchedFiles[] = mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file);
 
-                            $filesize = filesize($baseDir . $dir . $file);
+                        $filesize = filesize($baseDir . $dir . $file);
 
-                            //If the file grew over the limit we will keep the last valid file in the backup
-                            if ($filesize > $this->ReadPropertyInteger('SizeLimit') * 1024 * 1024) {
-                                //Skip files that are too big
-                                $this->SendDebug('Index', sprintf('Skipping too big file... %s. Size: %s', $dir . $file, $this->formatBytes($filesize)), 0);
+                        //If the file grew over the limit we will keep the last valid file in the backup
+                        if ($filesize > $this->ReadPropertyInteger('SizeLimit') * 1024 * 1024) {
+                            //Skip files that are too big
+                            $this->SendDebug('Index', sprintf('Skipping too big file... %s. Size: %s', $dir . $file, $this->formatBytes($filesize)), 0);
 
-                                //Sum skipped files for statistics
-                                $backupSkip++;
+                            //Sum skipped files for statistics
+                            $backupSkip++;
+                        } else {
+                            //Lets sum up every file we want to backup
+                            $backupSize += $filesize;
+
+                            //Add any new files
+                            if (!isset($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
+                                $fileQueue['add'][] = $dir . $file;
+                                $uploadSize += $filesize;
                             } else {
-                                //Lets sum up every file we want to backup
-                                $backupSize += $filesize;
-
-                                //Add any new files
-                                if (!isset($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
-                                    $fileQueue['add'][] = $dir . $file;
-                                    $uploadSize += $filesize;
-                                } else {
-                                    //First sync. Lets match the hash
-                                    if (is_string($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
-                                        if ($this->dropbox_hash_file($baseDir . $dir . $file) != $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)]) {
-                                            $fileQueue['update'][] = $dir . $file;
-                                            $uploadSize += $filesize;
-                                        } else {
-                                            $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)] = filemtime($baseDir . $dir . $file);
-                                        }
-                                    } elseif (is_int($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
-                                        if (filemtime($baseDir . $dir . $file) != $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)]) {
-                                            $fileQueue['update'][] = $dir . $file;
-                                            $uploadSize += $filesize;
-                                        }
+                                //First sync. Lets match the hash
+                                if (is_string($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
+                                    if ($this->dropbox_hash_file($baseDir . $dir . $file) != $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)]) {
+                                        $fileQueue['update'][] = $dir . $file;
+                                        $uploadSize += $filesize;
+                                    } else {
+                                        $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)] = filemtime($baseDir . $dir . $file);
+                                    }
+                                } elseif (is_int($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
+                                    if (filemtime($baseDir . $dir . $file) != $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)]) {
+                                        $fileQueue['update'][] = $dir . $file;
+                                        $uploadSize += $filesize;
                                     }
                                 }
                             }
