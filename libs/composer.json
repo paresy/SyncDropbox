@@ -1,5 +1,0 @@
-{
-  "require": {
-    "lukebaird/dropbox-v2-php-sdk": "*"
-  }
-}
