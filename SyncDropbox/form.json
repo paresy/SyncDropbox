@@ -31,5 +31,9 @@
 		{ "type": "Label", "caption": "" },
 		{ "type": "ProgressBar", "name": "UploadProgress", "current": 100, "indeterminate": true, "visible": false },
 		{ "type": "Button", "name": "ForceSync", "caption": "Force Sync", "onClick": "echo SDB_Sync($id);", "visible": false }
+	],
+	"status":
+	[
+		{ "code": 201, "icon": "error", "caption": "Synchronization halted: Too many files" }
 	]
 }

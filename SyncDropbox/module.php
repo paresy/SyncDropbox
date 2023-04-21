@@ -76,7 +76,7 @@ declare(strict_types=1);
                 $this->SetBuffer('FileCache', '');
             } else {
                 //Start first Sync after 10 seconds while in KR_READY, otherwise wait 5 minutes
-                if (IPS_GetKernelRunlevel() == KR_READY) {
+                if (IPS_GetKernelRunlevel() == KR_READY && $this->GetStatus() == IS_ACTIVE) {
                     $this->SetTimerInterval('Sync', 10 * 1000);
                 } else {
                     $this->SetTimerInterval('Sync', 5 * 60 * 1000);
@@ -553,6 +553,8 @@ declare(strict_types=1);
 
         public function Sync()
         {
+            $this->SetStatus(IS_ACTIVE);
+
             $this->SetTimerInterval('Sync', 0);
 
             if (!$this->ReadPropertyBoolean('Active')) {
@@ -617,11 +619,22 @@ declare(strict_types=1);
             //Save all entries for partial sync
             $compressedFileCache = gzencode(json_encode($fileCache, JSON_THROW_ON_ERROR));
             $this->SendDebug('Sync', sprintf('We have %d files in your Dropbox (FileCache: %s)', count($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
-            $this->SetBuffer('FileCache', $compressedFileCache);
 
             //Save the FileQueue which the Upload function will process
             $compressedFileQueue = gzencode(json_encode($fileQueue, JSON_THROW_ON_ERROR));
             $this->SendDebug('Sync', sprintf('Sync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)', count($fileQueue['add']), count($fileQueue['update']), count($fileQueue['delete']), $this->formatBytes(strlen($compressedFileQueue))), 0);
+
+            //Show error if we have too many files
+            if ((strlen($compressedFileCache) >= 512 * 1024) || (strlen($compressedFileQueue) >= 512 * 1024)) {
+                $this->SetStatus(IS_EBASE + 1);
+
+                $this->UpdateFormField('UploadProgress', 'visible', false);
+                $this->UpdateFormField('ForceSync', 'visible', true);
+
+                return;
+            }
+
+            $this->SetBuffer('FileCache', $compressedFileCache);
             $this->SetBuffer('FileQueue', $compressedFileQueue);
 
             //Start Upload if there is anything to do
