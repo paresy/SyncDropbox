@@ -427,30 +427,9 @@ declare(strict_types=1);
                 return true;
             }
 
-            //For Windows we need to apply some filters
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' || IPS_GetKernelPlatform() == 'Windows x64') {
-                if ($file == 'mime.types') {
-                    return true;
-                }
-                if ($file == 'cacert.pem') {
-                    return true;
-                }
-                if (substr($file, 0, 8) == 'webfront') {
-                    return true;
-                }
-                if (substr($file, 0, 5) == 'forms') {
-                    return true;
-                }
-                if (substr($file, 0, 6) == 'locale') {
-                    return true;
-                }
+            //For Windows we want to exclude logs as well, which are not in a separate folder
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
                 if (substr($file, 0, 4) == 'logs') {
-                    return true;
-                }
-                if (substr($file, 0, 6) == 'tzdata') {
-                    return true;
-                }
-                if (isset($path_info['extension']) && in_array($path_info['extension'], ['dll', 'exe'])) {
                     return true;
                 }
             }
