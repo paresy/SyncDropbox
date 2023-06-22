@@ -395,7 +395,7 @@ declare(strict_types=1);
             }
 
             //Always compare lower case
-            $file = mb_strtolower($file);
+            $file = $this->StrToLower($file);
 
             //Check against file filter
             if ($this->ReadPropertyString('PathFilter') != '') {
@@ -437,6 +437,17 @@ declare(strict_types=1);
             return false;
         }
 
+        private function StrToLower($str)
+        {
+            if (function_exists('mb_strtolower')) {
+                return mb_strtolower($str);
+            }
+            // For RUTX we do not have mbstring available. Revert to less effective function.
+            else {
+                return strtolower($str);
+            }
+        }
+
         private function GetDestinationFolder()
         {
             return IPS_GetLicensee();
@@ -474,7 +485,7 @@ declare(strict_types=1);
                     if (is_dir($baseDir . $dir . $file)) {
                         $searchDir($dir . $file . '/');
                     } else {
-                        $touchedFiles[] = mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file);
+                        $touchedFiles[] = $this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $dir . $file);
 
                         $filesize = filesize($baseDir . $dir . $file);
 
@@ -490,20 +501,20 @@ declare(strict_types=1);
                             $backupSize += $filesize;
 
                             //Add any new files
-                            if (!isset($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
+                            if (!isset($fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
                                 $fileQueue['add'][] = $dir . $file;
                                 $uploadSize += $filesize;
                             } else {
                                 //First sync. Lets match the hash
-                                if (is_string($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
-                                    if ($this->dropbox_hash_file($baseDir . $dir . $file) != $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)]) {
+                                if (is_string($fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
+                                    if ($this->dropbox_hash_file($baseDir . $dir . $file) != $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)]) {
                                         $fileQueue['update'][] = $dir . $file;
                                         $uploadSize += $filesize;
                                     } else {
-                                        $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)] = filemtime($baseDir . $dir . $file);
+                                        $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)] = filemtime($baseDir . $dir . $file);
                                     }
-                                } elseif (is_int($fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
-                                    if (filemtime($baseDir . $dir . $file) != $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)]) {
+                                } elseif (is_int($fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)])) {
+                                    if (filemtime($baseDir . $dir . $file) != $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $dir . $file)]) {
                                         $fileQueue['update'][] = $dir . $file;
                                         $uploadSize += $filesize;
                                     }
@@ -569,7 +580,7 @@ declare(strict_types=1);
 
             //Only update file cache if the target folder already exists
             foreach ($targets['entries'] as $target) {
-                if ($target['path_lower'] == mb_strtolower('/' . $this->GetDestinationFolder())) {
+                if ($target['path_lower'] == $this->StrToLower('/' . $this->GetDestinationFolder())) {
                     $files = null;
                     while ($files == null || $files['has_more']) {
                         if ($files == null) {
@@ -722,7 +733,7 @@ declare(strict_types=1);
                 $dropbox->files->upload('/' . $this->GetDestinationFolder() . '/' . $fileQueue['add'][0], $baseDir . $fileQueue['add'][0]);
 
                 //Add uploaded file to fileCache
-                $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['add'][0])] = filemtime($baseDir . $fileQueue['add'][0]);
+                $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['add'][0])] = filemtime($baseDir . $fileQueue['add'][0]);
 
                 //Add to upload statistic
                 $this->SetValue('TransferredMegabytes', $this->GetValue('TransferredMegabytes') + (filesize($baseDir . $fileQueue['add'][0]) / 1024 / 1024));
@@ -738,7 +749,7 @@ declare(strict_types=1);
                 $dropbox->files->upload('/' . $this->GetDestinationFolder() . '/' . $fileQueue['update'][0], $baseDir . $fileQueue['update'][0], 'overwrite');
 
                 //Update uploaded file in fileCache
-                $fileCache[mb_strtolower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['update'][0])] = filemtime($baseDir . $fileQueue['update'][0]);
+                $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['update'][0])] = filemtime($baseDir . $fileQueue['update'][0]);
 
                 //Add to upload statistic
                 $this->SetValue('TransferredMegabytes', $this->GetValue('TransferredMegabytes') + (filesize($baseDir . $fileQueue['update'][0]) / 1024 / 1024));
@@ -753,7 +764,7 @@ declare(strict_types=1);
                 $dropbox->files->delete($fileQueue['delete'][0]);
 
                 //Update uploaded file in fileCache
-                unset($fileCache[mb_strtolower($fileQueue['delete'][0])]);
+                unset($fileCache[$this->StrToLower($fileQueue['delete'][0])]);
 
                 //Remove successful upload
                 array_shift($fileQueue['delete']);
