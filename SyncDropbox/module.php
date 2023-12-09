@@ -658,13 +658,18 @@ declare(strict_types=1);
             //Load the current FileQueue
             $fileQueue = json_decode(gzdecode($this->GetBuffer('FileQueue')), true);
 
-            //If there are any pending uploading we will skip the resync
+            //If there are any pending changes we will skip the resync
             if (count($fileQueue['add']) > 0 || count($fileQueue['update']) > 0 || count($fileQueue['delete']) > 0) {
-                if (intval($this->GetBuffer('LastUpload')) + 15 * 60 > time()) {
-                    $this->SendDebug('ReSync', 'Forced. Upload seems to be stuck', 0);
-                } else {
+                if (!$this->GetBuffer('LastUpload')) {
+                    // If we got stuck on the first change, initialize LastUpload, and on the next iteration this will force the sync
+                    $this->SetBuffer('LastUpload', time());
+                    $this->SendDebug('ReSync', 'Force on next. Upload seems to be stuck', 0);
+                    return;
+                } else if (intval($this->GetBuffer('LastUpload')) + 15 * 60 > time()) {
                     $this->SendDebug('ReSync', 'Skipping. Upload has not completed yet', 0);
                     return;
+                } else {
+                    $this->SendDebug('ReSync', 'Forced. Upload seems to be stuck', 0);
                 }
             }
 
