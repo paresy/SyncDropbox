@@ -665,7 +665,7 @@ declare(strict_types=1);
                     $this->SetBuffer('LastUpload', time());
                     $this->SendDebug('ReSync', 'Force on next. Upload seems to be stuck', 0);
                     return;
-                } else if (intval($this->GetBuffer('LastUpload')) + 15 * 60 > time()) {
+                } elseif (intval($this->GetBuffer('LastUpload')) + 15 * 60 > time()) {
                     $this->SendDebug('ReSync', 'Skipping. Upload has not completed yet', 0);
                     return;
                 } else {
