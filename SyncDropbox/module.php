@@ -7,6 +7,12 @@ declare(strict_types=1);
     class SyncDropbox extends IPSModule
     {
 //        private const MAX_BUFFER_SIZE = 256 * 1024;
+        // Nicht anheben! Symcon schneidet Instanz-Buffer beim Speichern hart auf 512 KB ab
+        // („Truncating buffer 'FileCache' to newest 512kB", Kernel 9.1) — ein größerer Wert
+        // führt zu einem abgeschnittenen gzip-Strom und beim nächsten Upload() zum Crash in
+        // gzdecode() (verifiziert 17.08.2026). Diese Konstante muss das Speichern also VOR
+        // der Truncation abfangen; wächst der FileCache darüber (~19.000 Dateien im
+        // Dropbox-Bestand), hilft nur, den Bestand über den PathFilter zu verkleinern.
         private const MAX_BUFFER_SIZE = 512 * 1024;
 
         //This one needs to be available on our OAuth client backend.
