@@ -6,6 +6,15 @@ declare(strict_types=1);
 
     class SyncDropbox extends IPSModule
     {
+//        private const MAX_BUFFER_SIZE = 256 * 1024;
+        // Nicht anheben! Symcon schneidet Instanz-Buffer beim Speichern hart auf 512 KB ab
+        // („Truncating buffer 'FileCache' to newest 512kB", Kernel 9.1) — ein größerer Wert
+        // führt zu einem abgeschnittenen gzip-Strom und beim nächsten Upload() zum Crash in
+        // gzdecode() (verifiziert 17.08.2026). Diese Konstante muss das Speichern also VOR
+        // der Truncation abfangen; wächst der FileCache darüber (~19.000 Dateien im
+        // Dropbox-Bestand), hilft nur, den Bestand über den PathFilter zu verkleinern.
+        private const MAX_BUFFER_SIZE = 512 * 1024;
+
         //This one needs to be available on our OAuth client backend.
         //Please contact us to register for an identifier: https://www.symcon.de/kontakt/#OAuth
         private $oauthIdentifer = 'sync_dropbox';
@@ -117,7 +126,7 @@ declare(strict_types=1);
             return 'https://' . $this->oauthServer . '/authorize/' . $this->oauthIdentifer . '?username=' . urlencode(IPS_GetLicensee());
         }
 
-        private function FetchRefreshToken($code)
+        private function FetchRefreshToken($code): string
         {
             $this->SendDebug('FetchRefreshToken', 'Use Authentication Code to get our precious Refresh Token!', 0);
 
@@ -251,6 +260,59 @@ declare(strict_types=1);
             }
         }
 
+        private function formatBufferSizeDetails(string $name, int $size): string
+        {
+            return sprintf($this->Translate('%s: %d bytes (%s)'), $name, $size, $this->formatBytes($size));
+        }
+
+        private function buildBufferLimitMessage(int $fileCacheSize, int $fileQueueSize): string
+        {
+            $offenders = [];
+            if ($fileCacheSize >= self::MAX_BUFFER_SIZE) {
+                $offenders[] = 'FileCache';
+            }
+            if ($fileQueueSize >= self::MAX_BUFFER_SIZE) {
+                $offenders[] = 'FileQueue';
+            }
+
+            return sprintf(
+                $this->Translate('Buffer limit reached (%s): %s; %s'),
+                implode(', ', $offenders),
+                $this->formatBufferSizeDetails('FileCache', $fileCacheSize),
+                $this->formatBufferSizeDetails('FileQueue', $fileQueueSize)
+            );
+        }
+
+        private function SaveSyncState(array $fileCache, array $fileQueue, string $context): bool
+        {
+            $compressedFileCache = gzencode(json_encode($fileCache, JSON_THROW_ON_ERROR));
+            $fileCacheSize = strlen($compressedFileCache);
+            $this->SendDebug($context, sprintf('We have %d files in your Dropbox (FileCache: %s)', count($fileCache), $this->formatBytes($fileCacheSize)), 0);
+
+            $compressedFileQueue = gzencode(json_encode($fileQueue, JSON_THROW_ON_ERROR));
+            $fileQueueSize = strlen($compressedFileQueue);
+            $this->SendDebug($context, sprintf('Queue = Add: %d, Update: %d, Remove: %d (FileQueue: %s)', count($fileQueue['add']), count($fileQueue['update']), count($fileQueue['delete']), $this->formatBytes($fileQueueSize)), 0);
+
+            if (($fileCacheSize >= self::MAX_BUFFER_SIZE) || ($fileQueueSize >= self::MAX_BUFFER_SIZE)) {
+                $message = $this->buildBufferLimitMessage($fileCacheSize, $fileQueueSize);
+                $this->SendDebug($context, $message, 0);
+                $this->SetBuffer('LimitError', $message);
+                $this->SetStatus(IS_EBASE + 1);
+                $this->SetTimerInterval('Upload', 0);
+                $this->UpdateFormField('UploadProgress', 'visible', false);
+                $this->UpdateFormField('BufferLimitInfo', 'caption', $message);
+                $this->UpdateFormField('BufferLimitInfo', 'visible', true);
+                $this->UpdateFormField('ForceSync', 'visible', true);
+                return false;
+            }
+
+            $this->SetBuffer('LimitError', '');
+            $this->UpdateFormField('BufferLimitInfo', 'visible', false);
+            $this->SetBuffer('FileCache', $compressedFileCache);
+            $this->SetBuffer('FileQueue', $compressedFileQueue);
+            return true;
+        }
+
         //Source: https://github.com/dropbox/dropbox-api-content-hasher/pull/2
         private function dropbox_hash_stream($stream, $chunksize = 8 * 1024)
         {
@@ -354,6 +416,11 @@ declare(strict_types=1);
                         $data->actions[6]->caption = $this->Translate('Last Synchronization') . ': ' . date('d.m.Y H:i', intval($this->GetBuffer('LastFinishedSync')));
                     } else {
                         $data->actions[6]->caption = $this->Translate('Last Synchronization') . ': ' . $this->Translate('Never');
+                    }
+
+                    if ($this->GetBuffer('LimitError') != '') {
+                        $data->actions[7]->visible = true;
+                        $data->actions[7]->caption = $this->GetBuffer('LimitError');
                     }
 
                     if ($this->GetBuffer('FileQueue') != '') {
@@ -543,6 +610,7 @@ declare(strict_types=1);
 
         public function Sync()
         {
+            ini_set('memory_limit', '-1');
             $this->SetStatus(IS_ACTIVE);
 
             $this->SetTimerInterval('Sync', 0);
@@ -607,25 +675,9 @@ declare(strict_types=1);
             $fileQueue = $this->CalculateFileQueue($fileCache);
 
             //Save all entries for partial sync
-            $compressedFileCache = gzencode(json_encode($fileCache, JSON_THROW_ON_ERROR));
-            $this->SendDebug('Sync', sprintf('We have %d files in your Dropbox (FileCache: %s)', count($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
-
-            //Save the FileQueue which the Upload function will process
-            $compressedFileQueue = gzencode(json_encode($fileQueue, JSON_THROW_ON_ERROR));
-            $this->SendDebug('Sync', sprintf('Sync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)', count($fileQueue['add']), count($fileQueue['update']), count($fileQueue['delete']), $this->formatBytes(strlen($compressedFileQueue))), 0);
-
-            //Show error if we have too many files
-            if ((strlen($compressedFileCache) >= 512 * 1024) || (strlen($compressedFileQueue) >= 512 * 1024)) {
-                $this->SetStatus(IS_EBASE + 1);
-
-                $this->UpdateFormField('UploadProgress', 'visible', false);
-                $this->UpdateFormField('ForceSync', 'visible', true);
-
+            if (!$this->SaveSyncState($fileCache, $fileQueue, 'Sync')) {
                 return;
             }
-
-            $this->SetBuffer('FileCache', $compressedFileCache);
-            $this->SetBuffer('FileQueue', $compressedFileQueue);
 
             //Start Upload if there is anything to do
             if (count($fileQueue['add']) > 0 || count($fileQueue['update']) > 0 || count($fileQueue['delete']) > 0) {
@@ -647,6 +699,7 @@ declare(strict_types=1);
 
         public function ReSync()
         {
+            ini_set('memory_limit', '-1');
             if (!$this->ReadPropertyBoolean('Active')) {
                 return;
             }
@@ -684,15 +737,9 @@ declare(strict_types=1);
             //Build the add/update/delete queue. Will also update the fileCache!
             $fileQueue = $this->CalculateFileQueue($fileCache);
 
-            //Save the updated FileCache
-            $compressedFileCache = gzencode(json_encode($fileCache, JSON_THROW_ON_ERROR));
-            $this->SendDebug('ReSync', sprintf('We have %d files in your Dropbox (FileCache: %s)', count($fileCache), $this->formatBytes(strlen($compressedFileCache))), 0);
-            $this->SetBuffer('FileCache', $compressedFileCache);
-
-            //Save the updated FileQueue
-            $compressedFileQueue = gzencode(json_encode($fileQueue, JSON_THROW_ON_ERROR));
-            $this->SendDebug('ReSync', sprintf('ReSync = Add: %d, Update: %d, Remove: %d (FileQueue: %s)', count($fileQueue['add']), count($fileQueue['update']), count($fileQueue['delete']), $this->formatBytes(strlen($compressedFileQueue))), 0);
-            $this->SetBuffer('FileQueue', $compressedFileQueue);
+            if (!$this->SaveSyncState($fileCache, $fileQueue, 'ReSync')) {
+                return;
+            }
 
             //Start Upload if there is anything to do
             if (count($fileQueue['add']) > 0 || count($fileQueue['update']) > 0 || count($fileQueue['delete']) > 0) {
@@ -711,6 +758,7 @@ declare(strict_types=1);
 
         public function Upload()
         {
+            ini_set('memory_limit', '-1');
             $this->SetTimerInterval('Upload', 0);
 
             if (!$this->ReadPropertyBoolean('Active')) {
@@ -735,15 +783,19 @@ declare(strict_types=1);
             if (count($fileQueue['add']) > 0) {
                 //Upload to Dropbox
                 $this->SendDebug('Upload', sprintf('Adding file... %s. Size %s', $fileQueue['add'][0], $this->formatBytes(filesize($baseDir . $fileQueue['add'][0]))), 0);
-                $dropbox->files->upload('/' . $this->GetDestinationFolder() . '/' . $fileQueue['add'][0], $baseDir . $fileQueue['add'][0]);
+                try {
+                    $dropbox->files->upload('/' . $this->GetDestinationFolder() . '/' . $fileQueue['add'][0], $baseDir . $fileQueue['add'][0]);
 
-                //Add uploaded file to fileCache
-                $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['add'][0])] = filemtime($baseDir . $fileQueue['add'][0]);
+                    //Add uploaded file to fileCache
+                    $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['add'][0])] = filemtime($baseDir . $fileQueue['add'][0]);
 
-                //Add to upload statistic
-                $this->SetValue('TransferredMegabytes', $this->GetValue('TransferredMegabytes') + (filesize($baseDir . $fileQueue['add'][0]) / 1024 / 1024));
+                    //Add to upload statistic
+                    $this->SetValue('TransferredMegabytes', $this->GetValue('TransferredMegabytes') + (filesize($baseDir . $fileQueue['add'][0]) / 1024 / 1024));
+                } catch (\Exception $e) {
+                    IPS_LogMessage('SyncDropbox', sprintf('Skipping file (add) due to upload error: %s (%s)', $fileQueue['add'][0], $e->getMessage()));
+                }
 
-                //Remove successful upload
+                //Remove from queue (successful or skipped)
                 array_shift($fileQueue['add']);
 
                 //Start timer for next upload
@@ -751,15 +803,19 @@ declare(strict_types=1);
             } elseif (count($fileQueue['update']) > 0) {
                 //Upload to Dropbox
                 $this->SendDebug('Upload', sprintf('Updating file... %s. Size %s', $fileQueue['update'][0], $this->formatBytes(filesize($baseDir . $fileQueue['update'][0]))), 0);
-                $dropbox->files->upload('/' . $this->GetDestinationFolder() . '/' . $fileQueue['update'][0], $baseDir . $fileQueue['update'][0], 'overwrite');
+                try {
+                    $dropbox->files->upload('/' . $this->GetDestinationFolder() . '/' . $fileQueue['update'][0], $baseDir . $fileQueue['update'][0], 'overwrite');
 
-                //Update uploaded file in fileCache
-                $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['update'][0])] = filemtime($baseDir . $fileQueue['update'][0]);
+                    //Update uploaded file in fileCache
+                    $fileCache[$this->StrToLower('/' . $this->GetDestinationFolder() . '/' . $fileQueue['update'][0])] = filemtime($baseDir . $fileQueue['update'][0]);
 
-                //Add to upload statistic
-                $this->SetValue('TransferredMegabytes', $this->GetValue('TransferredMegabytes') + (filesize($baseDir . $fileQueue['update'][0]) / 1024 / 1024));
+                    //Add to upload statistic
+                    $this->SetValue('TransferredMegabytes', $this->GetValue('TransferredMegabytes') + (filesize($baseDir . $fileQueue['update'][0]) / 1024 / 1024));
+                } catch (\Exception $e) {
+                    IPS_LogMessage('SyncDropbox', sprintf('Skipping file (update) due to upload error: %s (%s)', $fileQueue['update'][0], $e->getMessage()));
+                }
 
-                //Remove successful upload
+                //Remove from queue (successful or skipped)
                 array_shift($fileQueue['update']);
 
                 $this->SetTimerInterval('Upload', 1000);
@@ -795,11 +851,9 @@ declare(strict_types=1);
                 $this->UpdateFormField('ForceSync', 'visible', true);
             }
 
-            //Save the updated FileCache
-            $this->SetBuffer('FileCache', gzencode(json_encode($fileCache, JSON_THROW_ON_ERROR)));
-
-            //Save the updated FileQueue
-            $this->SetBuffer('FileQueue', gzencode(json_encode($fileQueue, JSON_THROW_ON_ERROR)));
+            if (!$this->SaveSyncState($fileCache, $fileQueue, 'Upload')) {
+                return;
+            }
 
             //Save timestamp of last action
             $this->SetBuffer('LastUpload', time());

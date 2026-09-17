@@ -32,7 +32,10 @@
             "Token: Not registered yet": "Token: Noch nicht registriert",
             "Upload limit in minutes per file. Default is 5 minutes": "Upload-Limitation in Minuten pro Datei. Standard ist 5 Minuten.",
             "Upload Limit": "Upload-Limitation",
-            "Synchronization halted: Too many files": "Synchronization pausiert: Zu viele Dateien"
+            "Synchronization halted: Too many files": "Synchronization pausiert: Zu viele Dateien",
+            "Synchronization halted: Buffer limit reached. See details below.": "Synchronisierung angehalten: Buffer-Limit erreicht. Details siehe unten.",
+            "Buffer limit reached (%s): %s; %s": "Buffer-Limit erreicht (%s): %s; %s",
+            "%s: %d bytes (%s)": "%s: %d Bytes (%s)"
         }
     }
 }

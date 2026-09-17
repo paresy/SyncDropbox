@@ -123,7 +123,7 @@ namespace Dropbox;
             $endpoint = 'https://content.dropboxapi.com/2/files/upload';
             $headers = [
                 'Content-Type: application/octet-stream',
-                "Dropbox-API-Arg: {\"path\": \"$target_path\", \"mode\": \"$mode\"}"
+                'Dropbox-API-Arg: ' . json_encode(['path' => $target_path, 'mode' => $mode])
             ];
             if (file_exists($file_data)) {
                 $postdata = file_get_contents($file_data);
